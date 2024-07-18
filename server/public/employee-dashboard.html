@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mitarbeiter Dashboard</title>
+    <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+    <header>
+        <h1>Mitarbeiter Dashboard</h1>
+        <button id="logout-btn">Ausloggen</button>
+    </header>
+    <main>
+        <section id="employee-info">
+            <h2>Meine Informationen</h2>
+            <div id="employee-details">
+                <!-- Wird dynamisch gefüllt -->
+            </div>
+        </section>
+        
+        <section id="document-search">
+            <h2>Dokumente suchen</h2>
+            <form id="search-form">
+                <input type="text" id="search-input" placeholder="Dokument suchen...">
+                <button type="submit">Suchen</button>
+            </form>
+        </section>
+
+        <section id="document-list">
+            <h2>Meine Dokumente</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Dateiname</th>
+                        <th>Hochgeladen am</th>
+                        <th>Aktion</th>
+                    </tr>
+                </thead>
+                <tbody id="document-table-body">
+                    <!-- Wird dynamisch gefüllt -->
+                </tbody>
+            </table>
+        </section>
+    </main>
+    <script src="/js/employee-dashboard.js"></script>
+</body>
+</html>

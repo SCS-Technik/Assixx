@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard</title>
+    <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+    <header>
+        <h1>Admin Dashboard</h1>
+        <button id="logout-btn">Ausloggen</button>
+    </header>
+    <main>
+        <section id="create-employee">
+            <h2>Mitarbeiter erstellen</h2>
+            <form id="create-employee-form">
+                <input type="text" name="username" placeholder="Benutzername" required>
+                <input type="email" name="email" placeholder="E-Mail" required>
+                <input type="password" name="password" placeholder="Passwort" required>
+                <input type="text" name="first_name" placeholder="Vorname" required>
+                <input type="text" name="last_name" placeholder="Nachname" required>
+                <input type="number" name="age" placeholder="Alter" required>
+                <input type="text" name="employee_id" placeholder="Mitarbeiter-ID" required>
+                <input type="text" name="iban" placeholder="IBAN" required>
+                <button type="submit">Mitarbeiter erstellen</button>
+            </form>
+        </section>
+        <section id="employee-list">
+            <h2>Mitarbeiter-Liste</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>E-Mail</th>
+                        <th>Mitarbeiter-ID</th>
+                        <th>Aktion</th>
+                    </tr>
+                </thead>
+                <tbody id="employee-table-body">
+                    <!-- Wird dynamisch gefüllt -->
+                </tbody>
+            </table>
+        </section>
+        <section id="upload-document">
+            <h2>Dokument hochladen</h2>
+            <form id="upload-document-form">
+                <select name="employeeId" id="employee-select" required>
+                    <option value="">Mitarbeiter auswählen</option>
+                </select>
+                <input type="file" name="document" required>
+                <button type="submit">Dokument hochladen</button>
+            </form>
+        </section>
+    </main>
+    <script src="/js/admin-dashboard.js"></script>
+</body>
+</html>
