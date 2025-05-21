@@ -2,23 +2,28 @@
 
 ## Projektbeschreibung
 
-Assixx ist eine umfassende Kommunikations- und Verwaltungslösung für Industriefirmen, speziell entwickelt für Produktionsarbeiter ohne PC-Zugang. Das System verbessert die Kommunikation zwischen Arbeitern, Administration und Management durch mobile Technologie.
+Assixx ist eine umfassende SaaS-Kommunikations- und Verwaltungslösung für Industriefirmen, speziell entwickelt für Produktionsarbeiter ohne PC-Zugang. Das System schließt die digitale Lücke zwischen Büro und Produktion und verbessert die Kommunikation zwischen Arbeitern, Administration und Management durch mobile Technologie.
+
+**Unsere Mission**: Produktionsarbeiter ohne PC-Zugang in die digitale Kommunikation einbinden und Industrieunternehmen dabei helfen, ihre internen Prozesse zu digitalisieren und zu optimieren.
 
 ## Vision
 Assixx wird eine vollständige SaaS-Plattform für Industriefirmen, die modular erweiterbare Features anbietet und Kunden ermöglicht, nur für die Funktionen zu bezahlen, die sie tatsächlich benötigen.
 
 ### Hauptfunktionen:
 
-- **Fehlermeldesystem**: Arbeiter können Fotos von Problemen machen und direkt melden
 - **Dokumentenverwaltung**: Digitale Verwaltung von Lohnabrechnungen, Krankmeldungen und Bescheinigungen
-- **Firmenkommunikation**: Kalender, Ankündigungen und Umfragen
-- **Verbesserungsvorschläge**: Mitarbeiter können Ideen einreichen und diskutieren
-- **Echtzeit-Benachrichtigungen**: Wichtige Meldungen erreichen sofort die richtigen Personen
+- **Firmenkommunikation**: Blackboard, Kalender, Chat und Umfragen
+- **Schichtplanungs-Tool**: Automatische Planerstellung, Tauschbörse und Überstundenerfassung
+- **KVP-System**: Verbesserungsvorschläge mit Fotouploads und Nachverfolgung
+- **Urlaubsantragsmanagement**: Digitale Beantragung und Verwaltung von Urlauben
+- **TPM-Kalender**: Verwaltung von Maschinenwartungen und -inspektionen
+- **Mehrsprachigkeit**: Unterstützung verschiedener Sprachen (DE, EN, PL, TR)
 
 ### Zielgruppen:
 
 - **Produktionsarbeiter**: Mobile App für einfachen Zugang zu Firmeninformationen
 - **Administratoren**: Web-Dashboard für Dokumentenverwaltung und Kommunikation
+- **Teamleiter**: Schichtplanung und Ressourcenmanagement
 - **Maintenance-Team**: Sofortige Benachrichtigungen bei gemeldeten Problemen
 - **Management**: Auswertungen und Berichte für bessere Entscheidungen
 
@@ -45,92 +50,184 @@ Assixx wird eine vollständige SaaS-Plattform für Industriefirmen, die modular 
 
 ## Prioritäten für die nächsten Entwicklungsphasen
 
-### Priorität 1: Kritische Funktionen
-1. **Dokumenten-Download** ✅
-   - ✅ Download-Route implementiert
-   - ✅ Berechtigungsprüfung
-   - ✅ Stream für große Dateien
-   - ✅ Download-Counter
-   - 🔄 Fehlerbehebung bei Dokumenten-Download
+### Priorität 1: Kernfeatures für Produktionsbetriebe
 
-2. **E-Mail-Benachrichtigungen** ✅
-   - ✅ Nodemailer Integration
-   - ✅ Templates für verschiedene Events (Willkommen, Neue Dokumente, Allgemein)
-   - ✅ Queue für Massen-E-Mails mit Batch-Verarbeitung
-   - ✅ Unsubscribe-Funktion mit Token-basierter Verifizierung
-   - ✅ Automatische Benachrichtigungen bei neuen Dokumenten
+1. **Blackboard-System**
+   - [ ] Firmenweit sichtbares Blackboard für allgemeine Ankündigungen
+   - [ ] Abteilungsspezifische Blackboards (nur für Mitglieder sichtbar)
+   - [ ] Team-basierte Blackboards für spezifische Arbeitsgruppen
+   - [ ] Admin-Panel zur Verwaltung aller Blackboards
+   - [ ] Leserechte für Mitarbeiter, volle Rechte für Admins
 
-3. **Mobile PWA** 📱
-   - Service Worker
-   - Offline-Funktionalität
-   - Push-Notifications
-   - App-Icon und Manifest
+2. **Firmenkalender**
+   - [ ] Zentraler Firmenkalender für allgemeine Events
+   - [ ] Abteilungsspezifische Kalender für interne Meetings
+   - [ ] Team-spezifische Kalender für Schichten und Arbeitspläne
+   - [ ] Integration mit externen Kalendersystemen (Google, Outlook)
+   - [ ] Erinnerungsfunktion für wichtige Termine
 
-### Priorität 2: Wichtige Funktionen
-1. **Stripe Integration** 💳
-   - Payment Routes erstellen
-   - Webhook Handler
-   - Automatische Feature-Aktivierung nach Zahlung
+3. **Chat-Funktion**
+   - [ ] Direkte Kommunikation zwischen Admins und Mitarbeitern
+   - [ ] Posteingang für jeden Mitarbeiter
+   - [ ] Benachrichtigungen über neue Nachrichten
+   - [ ] Archiv für vergangene Konversationen
+   - [ ] Möglichkeit für Dateianhänge in Nachrichten
 
-2. **Lohnabrechnungs-Upload & Verwaltung** 
+4. **Schichtplanungs-Tool**
+   - [ ] Interaktiver Schichtplaner für Team- und Abteilungsleiter
+   - [ ] Automatische Schichtplanerstellung basierend auf Verfügbarkeiten
+   - [ ] Mitarbeiter-Tauschbörse für Schichten
+   - [ ] Benachrichtigungen über Schichtänderungen
+   - [ ] Überstunden- und Fehlzeitenerfassung
+
+5. **TPM-Kalender (Total Productive Maintenance)**
+   - [ ] Terminplanung für Maschinenwartungen
+   - [ ] Wiederkehrende Wartungsintervalle
+   - [ ] Zuständigkeitsverwaltung für Maintenance-Teams
+   - [ ] Dokumentation durchgeführter Wartungen
+   - [ ] Warnungen bei überfälligen Wartungsterminen
+
+6. **Umfrage-Tool**
+   - [ ] Erstellung von Multiple-Choice-Umfragen durch Admins
+   - [ ] Verpflichtende Umfragen für Mitarbeiter
+   - [ ] Automatische Auswertung und Visualisierung der Ergebnisse
+   - [ ] Anonyme Umfragen für sensible Themen
+   - [ ] Export von Umfrageergebnissen
+
+7. **Urlaubsantrag-System**
+   - [ ] Digitale Urlaubsanträge von Mitarbeitern an Admins
+   - [ ] Übersicht über verfügbare Urlaubstage
+   - [ ] Genehmigungsprozess mit Benachrichtigungen
+   - [ ] Kalenderverfügbarkeit zur Vermeidung von Engpässen
+   - [ ] Übersicht für Admins über alle eingereichten Anträge
+
+8. **KVP-System (Kontinuierlicher Verbesserungsprozess)**
+   - [ ] Foto-Upload für Verbesserungsvorschläge oder Problemmeldungen
+   - [ ] Verfolgung des Status von eingereichten Vorschlägen
+   - [ ] Bewertungssystem für Vorschläge
+   - [ ] Belohnungssystem für umgesetzte Ideen
+   - [ ] Auswertung und Reporting über eingereichte KVPs
+
+9. **Lohnabrechnungs-Upload & Verwaltung** 
    - [ ] Sichere Datei-Uploads mit Verschlüsselung
    - [ ] Automatische Kategorisierung
    - [ ] Versionskontrolle für Dokumente
    - [ ] Massenupload-Funktion
    - [ ] Automatische Benachrichtigungen bei neuen Dokumenten
 
-3. **Customer Portal**
-   - Subscription Management 
-   - Feature-Übersicht
-   - Rechnungshistorie
-   - Billing Dashboard
+### Priorität 2: Wichtige Funktionen
 
-4. **Benachrichtigungssystem**
+1. **Mehrsprachige Unterstützung**
+   - [ ] Grundlegende Mehrsprachigkeit (DE, EN)
+   - [ ] Erweiterung um weitere Sprachen (PL, TR)
+   - [ ] Sprachauswahl im Benutzerprofil
+   - [ ] Automatische Spracherkennung
+   - [ ] Übersetzungsmanagement-System
+
+2. **Mobile PWA**
+   - [ ] Service Worker für Offline-Funktionalität
+   - [ ] Push-Notifications
+   - [ ] App-Icon und Manifest
+   - [ ] Installation auf Mobilgeräten
+   - [ ] Offline-Synchronisation
+
+3. **Benachrichtigungssystem**
    - [ ] E-Mail-Templates anpassbar
    - [ ] SMS-Benachrichtigungen (optional)
    - [ ] In-App Push-Notifications
    - [ ] Benachrichtigungs-Center
    - [ ] Eskalationsregeln
 
-### Priorität 3: Zusätzliche Features
-1. **Reporting & Analytics**
-   - Dashboard mit KPIs
-   - Export-Funktionen
-   - Automatische Reports
+4. **Dokumenten-Management**
+   - [ ] OCR für durchsuchbare PDFs
+   - [ ] Automatische Archivierung
+   - [ ] Erweiterte Suchfunktion
+   - [ ] Dokument-Tags und Metadaten
+   - [ ] Compliance-Berichte
 
-2. **Sicherheit & Datenschutz**
+5. **Digitales Handbuch/Wiki**
+   - [ ] Maschinen- und Prozessdokumentation
+   - [ ] Suchbare Anleitungen mit Bildern/Videos
+   - [ ] QR-Code-Zugriff auf Betriebshandbücher
+   - [ ] Versionierung von Dokumentationen
+   - [ ] Offline-Verfügbarkeit kritischer Anleitungen
+
+### Priorität 3: Zusätzliche Features
+
+1. **Stripe Integration**
+   - [ ] Automatische Abrechnung
+   - [ ] Webhook Handler
+   - [ ] Automatische Feature-Aktivierung nach Zahlung
+   - [ ] Payment Routes erstellen
+   - [ ] Kundenverwaltung
+
+2. **Reporting & Analytics**
+   - [ ] Dashboard mit KPIs
+   - [ ] Export-Funktionen
+   - [ ] Automatische Reports
+   - [ ] Nutzungsstatistiken
+   - [ ] Trendanalysen
+
+3. **Sicherheit & Datenschutz**
    - [ ] End-to-End-Verschlüsselung für Dokumente
    - [ ] 2-Faktor-Authentifizierung
    - [ ] DSGVO-konforme Datenverarbeitung
    - [ ] Automatisches Löschen alter Dokumente
    - [ ] Zugriffskontrolle mit detaillierten Rechten
 
-3. **UI/UX Polish**
-   - Dark Mode
-   - Keyboard Shortcuts
-   - Performance-Optimierung
+4. **UI/UX Polish**
+   - [ ] Dark Mode
+   - [ ] Keyboard Shortcuts
+   - [ ] Performance-Optimierung
+   - [ ] Barrierefreiheit
+   - [ ] Responsive Design für alle Geräte
+
+5. **Qualitätssicherungs-Checklisten**
+   - [ ] Digitale Checklisten für Qualitätskontrollen
+   - [ ] Fotodokumentation von Qualitätsmängeln
+   - [ ] Automatische Benachrichtigung bei Abweichungen
+   - [ ] Trendanalyse von Qualitätsproblemen
+   - [ ] Integration mit KVP-System
+
+6. **Skill-Matrix/Qualifikationsmanagement**
+   - [ ] Übersicht über Qualifikationen und Zertifikate
+   - [ ] Automatische Erinnerungen bei auslaufenden Zertifikaten
+   - [ ] Planung von Weiterbildungen
+   - [ ] Personalbedarfsplanung basierend auf Qualifikationen
+   - [ ] Integration mit Schichtplanung
+
+## Organisationsstruktur in Assixx
+
+### Definitionen
+- **Team**: Eine Gruppe von Mitarbeitern, die an denselben Maschinen arbeiten und einem Teamleiter zugeordnet sind
+- **Abteilung**: Alle Mitarbeiter, die einem Abteilungsleiter oder Bereichsleiter zugeordnet sind
+- **Firma**: Die Gesamtheit aller Abteilungen und Teams
 
 ## Technische Roadmap
 
 ### Q1 2025
-- [ ] Stripe Integration
-- [ ] Mobile PWA
-- [ ] 2FA Implementation
-- [ ] Automatische Backups
+- [ ] Blackboard & Firmenkalender implementieren
+- [ ] Chat-Funktion zwischen Admins und Mitarbeitern
+- [ ] Schichtplanungs-Tool entwickeln
+- [ ] Mobile PWA für Produktionsarbeiter
 
 ### Q2 2025
+- [ ] TPM-Kalender und Wartungsplanung
+- [ ] Mehrsprachigkeit implementieren (DE, EN, PL)
+- [ ] Umfrage- und KVP-System
+- [ ] Urlaubsantrags-Management
 - [ ] Docker-Deployment
-- [ ] Kubernetes-Orchestrierung
-- [ ] CI/CD Pipeline
-- [ ] Monitoring & Alerting
 
 ### Q3 2025
 - [ ] Mobile Apps (iOS/Android)
+- [ ] Digitales Handbuch/Wiki
 - [ ] API v2 mit GraphQL
-- [ ] Mehrsprachigkeit (EN, TR, PL)
+- [ ] Stripe Integration
 - [ ] Advanced Analytics
 
 ### Q4 2025
+- [ ] Qualitätssicherungs-Checklisten
+- [ ] Skill-Matrix/Qualifikationsmanagement
 - [ ] AI-Features (Dokumentenklassifizierung)
 - [ ] Voice-Integration
 - [ ] Blockchain für Audit-Trail
@@ -160,65 +257,76 @@ Assixx wird eine vollständige SaaS-Plattform für Industriefirmen, die modular 
   - ✅ Queue für Massen-E-Mails
   - ✅ Feature-basierte Verfügbarkeit (Premium/Enterprise)
   - ✅ Unsubscribe-Funktion
-- [ ] Ankündigungssystem
-- [ ] Umfragemodul mit Auswertungen
-- [ ] Verbesserungsvorschläge-Portal
+- 🔄 Blackboard-System
+  - [ ] Firmenweit sichtbares Blackboard
+  - [ ] Abteilungsspezifische Blackboards
+  - [ ] Team-basierte Blackboards
+- 🔄 Firmenkalender-System
+  - [ ] Zentraler Firmenkalender
+  - [ ] Abteilungsspezifische Kalender
+  - [ ] Team-spezifische Kalender
+- 🔄 Chat-Funktion
+  - [ ] Direktkommunikation
+  - [ ] Benachrichtigungen
+  - [ ] Archiv
 
-### Phase 3: Mobile-First Optimierung
+### Phase 3: Produktionsspezifische Features
+- 🔄 Schichtplanungs-Tool
+  - [ ] Interaktiver Planer
+  - [ ] Automatische Planerstellung
+  - [ ] Tauschbörse
+  - [ ] Überstundenerfassung
+- 🔄 TPM-Kalender
+  - [ ] Wartungsplanung
+  - [ ] Maschinenverwaltung
+  - [ ] Intervallmechanismen
+- 🔄 Umfrage-Tool
+  - [ ] Erstellung
+  - [ ] Auswertung
+  - [ ] Reporting
+- 🔄 Urlaubsantrag-System
+  - [ ] Digitale Anträge
+  - [ ] Genehmigungsprozess
+  - [ ] Kalenderverfügbarkeit
+- 🔄 KVP-System
+  - [ ] Foto-Upload
+  - [ ] Vorschlagsverfolgung
+  - [ ] Belohnungssystem
+
+### Phase 4: Mobile-First Optimierung
 - 🔄 Progressive Web App (PWA) Implementierung
-  - Service Worker
-  - Offline-Funktionalität
-  - Push-Notifications
-  - App-Icon und Manifest
+  - [ ] Service Worker
+  - [ ] Offline-Funktionalität
+  - [ ] Push-Notifications
+  - [ ] App-Icon und Manifest
+- 🔄 Mehrsprachigkeit
+  - [ ] Grundlegende Mehrsprachigkeit (DE, EN)
+  - [ ] Erweiterung (PL, TR)
 - [ ] Responsive Design für alle Bildschirmgrößen
 - [ ] Touch-optimierte UI-Elemente
-
-### Phase 4: Fehlermeldesystem
-- [ ] Foto-Upload von Mobilgeräten
-- [ ] Ticketsystem für Problemmeldungen
-- [ ] Push-Benachrichtigungen an Maintenance
-- [ ] Status-Tracking für gemeldete Probleme
 
 ### Phase 5: SaaS-Monetarisierung
 - ✅ Feature-basierte Preispläne (Basic, Premium, Enterprise)
 - ✅ Feature-Toggle-System
 - ✅ Usage-Tracking für Features
 - 🔄 Stripe Integration
-  - Automatische Abrechnung
-  - Webhook Handler
-  - Automatische Feature-Aktivierung nach Zahlung
+  - [ ] Automatische Abrechnung
+  - [ ] Webhook Handler
+  - [ ] Automatische Feature-Aktivierung nach Zahlung
 - 🔄 Customer Portal
-  - Subscription Management
-  - Feature-Übersicht
-  - Billing Dashboard
+  - [ ] Subscription Management
+  - [ ] Feature-Übersicht
+  - [ ] Billing Dashboard
 - [ ] Trial-Perioden-Management
 - [ ] Nutzungsbasierte Abrechnung
 
-### Phase 6: Multi-Tenant-Architektur
-- ✅ Subdomain-basierte Mandantentrennung
-- ✅ Feature-Management-System
-- ✅ Modulare Feature-Aktivierung pro Kunde
-- [ ] Automatisiertes Onboarding neuer Firmen
-- [ ] White-Label-Branding pro Firma
-- [ ] Separate Datenbanken pro Mandant (derzeit gemeinsame DB)
-- [ ] Docker-Container-Deployment
-
-### Phase 7: Erweiterte Features
-- [ ] Mehrsprachige Unterstützung
-- [ ] QR-Code oder PIN-basierte Anmeldung
-- [ ] Automatische Berichte und Auswertungen
-- [ ] Integration mit bestehenden Firmensystemen
-- 🔄 Erweiterte Sicherheitsfunktionen
-  - [ ] 2FA Implementation
-  - [ ] DSGVO-konforme Verschlüsselung
-  - [ ] Erweiterte Audit Logs
-
-## Aktueller Fokus: Mobile-First Optimierung
-Der aktuelle Entwicklungsfokus liegt auf der Optimierung der Anwendung für mobile Endgeräte:
-- Entwicklung einer Progressive Web App (PWA)
-- Service Worker für Offline-Funktionalität
-- Responsive Design für alle Bildschirmgrößen
-- Push-Benachrichtigungen für neue Dokumente
+## Aktueller Fokus: Blackboard, Kalender, Chat und Schichtplanung
+Der aktuelle Entwicklungsfokus liegt auf der Implementierung der Kernfunktionen:
+- Blackboard-System für firmenweite, abteilungsspezifische und teambasierte Ankündigungen
+- Firmenkalender für Events und Meetings auf verschiedenen Ebenen
+- Chat-Funktion zwischen Admins und Mitarbeitern
+- Schichtplanungs-Tool für effiziente Personalplanung
+- TPM-Kalender für Maschinenwartungen
 
 ## KPIs und Erfolgsmessung
 
@@ -354,8 +462,19 @@ Der Server startet auf Port 3000. Sie können die Anwendung unter http://localho
 3. Melden Sie sich mit einem Administrator-Account an, um:
    - Mitarbeiter anzulegen
    - Dokumente für Mitarbeiter hochzuladen
+   - Blackboard-Einträge zu erstellen
+   - Events im Kalender zu planen
+   - Schichtpläne zu erstellen
+   - Wartungen zu terminieren
 
-4. Mitarbeiter können sich anmelden, um ihre Dokumente einzusehen und herunterzuladen.
+4. Mitarbeiter können sich anmelden, um:
+   - Ihre Dokumente einzusehen und herunterzuladen
+   - Blackboard-Einträge zu lesen
+   - Kalendereinträge zu sehen
+   - Schichtpläne einzusehen
+   - Nachrichten zu empfangen
+   - Urlaubsanträge zu stellen
+   - KVP-Vorschläge einzureichen
 
 ## Benutzerrollen und Berechtigungen
 
@@ -369,20 +488,35 @@ Das System verwendet vier Benutzerrollen:
 2. **Admin** - Firmenadministrator:
    - Mitarbeiterverwaltung
    - Dokumentenupload und -verwaltung
-   - Ankündigungen und Kalender pflegen
+   - Blackboard-Verwaltung (Firma, Abteilung, Team)
+   - Kalenderverwaltung
+   - Schichtplanung
    - Umfragen erstellen und auswerten
+   - Urlaubsanträge genehmigen
+   - KVP-Vorschläge bewerten
 
-3. **Maintenance** - Wartungspersonal:
+3. **Teamleiter** - Gruppenleiter:
+   - Schichtplanung für eigenes Team
+   - TPM-Kalender-Einsicht
+   - KVP-Bewertung für eigenes Team
+   - Urlaubsanträge des Teams genehmigen
+   - Team-Blackboard verwalten
+
+4. **Maintenance** - Wartungspersonal:
    - Empfang von Fehlermeldungen
    - Ticketverwaltung
+   - TPM-Kalender-Verwaltung
    - Statusupdates zu Problemen
 
-4. **Mitarbeiter** - Produktionsarbeiter:
+5. **Mitarbeiter** - Produktionsarbeiter:
    - Dokumente einsehen und herunterladen
-   - Fehler mit Fotos melden
+   - Blackboard-Einträge lesen
+   - Kalendereinträge sehen
+   - Schichtplan einsehen und Tauschvorschläge machen
+   - Nachrichten empfangen
+   - Urlaubsanträge stellen
+   - KVP-Vorschläge einreichen
    - An Umfragen teilnehmen
-   - Verbesserungsvorschläge einreichen
-   - Firmenkalender und Ankündigungen ansehen
 
 ## Fehlerbehebung
 
@@ -419,7 +553,7 @@ Das System verwendet vier Benutzerrollen:
 - Progressive Web App (PWA) für mobile Nutzung
 - Push-Benachrichtigungen
 - Bildupload und -verarbeitung
-- WebSocket für Echtzeit-Updates
+- WebSocket für Chat und Echtzeit-Updates
 - Offline-Synchronisation
 - Mehrsprachige Unterstützung
 - Stripe/PayPal Integration
@@ -434,10 +568,21 @@ Das System verwendet vier Benutzerrollen:
 
 ## Nächste Schritte
 
-1. **Sofort**: Stripe Account einrichten
-2. **Diese Woche**: Payment-Flow implementieren
-3. **Dieser Monat**: Mobile Optimierung
-4. **Dieses Quartal**: Erste zahlende Kunden
+1. **Sofort**: Blackboard- und Kalender-System implementieren
+2. **Diese Woche**: Chat-Funktion entwickeln
+3. **Nächste Woche**: Schichtplanungs-Tool konzipieren
+4. **Dieser Monat**: TPM-Kalender und Umfrage-System
+5. **Dieses Quartal**: Erste Version des KVP-Systems
+
+## Dokumentation
+
+Umfassende Dokumentation für Entwickler findest du im [docs/](docs/) Verzeichnis:
+
+- [Erste Schritte](docs/GETTING_STARTED.md) - Schnelleinstieg für neue Entwickler
+- [Mitwirken am Projekt](docs/CONTRIBUTING.md) - Richtlinien für Beiträge
+- [Systemarchitektur](docs/ARCHITECTURE.md) - Übersicht über die Architektur
+- [Features und To-Dos](docs/FEATURES_TODO.md) - Detaillierte Feature-Beschreibungen
+- [Code-Konventionen](docs/CODE_CONVENTIONS.md) - Richtlinien für konsistenten Code
 
 ## Beitragen
 
