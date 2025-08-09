@@ -81,27 +81,27 @@ export async function authenticateUser(
   usernameOrEmail: string,
   password: string,
 ): Promise<AuthUserResult> {
-  console.log("[DEBUG] authenticateUser called with:", usernameOrEmail);
+  console.info("[DEBUG] authenticateUser called with:", usernameOrEmail);
   try {
     // Try to find user by username first
-    console.log("[DEBUG] Looking up user by username...");
+    console.info("[DEBUG] Looking up user by username...");
     let user = await UserModel.findByUsername(usernameOrEmail);
 
     // If not found by username, try by email
     if (!user) {
-      console.log("[DEBUG] Not found by username, trying email...");
+      console.info("[DEBUG] Not found by username, trying email...");
       user = await UserModel.findByEmail(usernameOrEmail);
       if (user) {
-        console.log("[DEBUG] User found by email:", user.email);
+        console.info("[DEBUG] User found by email:", user.email);
       }
     }
 
     if (!user) {
-      console.log("[DEBUG] User not found");
+      console.info("[DEBUG] User not found");
       return { user: null, error: "USER_NOT_FOUND" };
     }
 
-    console.log(
+    console.info(
       "[DEBUG] User found:",
       user.username,
       "tenant_id:",
@@ -110,11 +110,11 @@ export async function authenticateUser(
       user.is_active,
     );
     const isValid = await bcrypt.compare(password, user.password);
-    console.log("[DEBUG] Password comparison result:", isValid);
+    console.info("[DEBUG] Password comparison result:", isValid);
     if (isValid) {
       // Check if user is active
       if (user.is_active === false) {
-        console.log("[DEBUG] User is inactive, denying access");
+        console.info("[DEBUG] User is inactive, denying access");
         return { user: null, error: "USER_INACTIVE" };
       }
       return { user: dbUserToDatabaseUser(user) };
@@ -154,7 +154,7 @@ export function generateToken(
         `sess_${Date.now()}_${crypto.randomBytes(16).toString("hex")}`, // Cryptographically secure session ID
     };
 
-    const token = jwt.sign(payload, JWT_SECRET, { expiresIn: "8h" }); // 8 Stunden wie bei den meisten SaaS
+    const token = jwt.sign(payload, JWT_SECRET, { expiresIn: "30m" }); // 30 Minuten
 
     return token;
   } catch (error) {
@@ -188,23 +188,39 @@ export async function authenticateToken(
   }
 
   // Debug logging
-  console.log("Auth check - Path:", req.path);
-  console.log("Auth check - Headers:", req.headers);
-  console.log("Auth check - Cookies:", req.cookies);
-  console.log("Auth check - Token found:", !!token);
+  console.info("Auth check - Path:", req.path);
+  console.info("Auth check - Headers:", req.headers);
+  console.info("Auth check - Cookies:", req.cookies);
+  console.info("Auth check - Token found:", !!token);
 
   if (!token) {
-    res.status(401).json({ error: "Authentication token required" });
+    // Check if client expects HTML (browser page request) or JSON (API request)
+    const acceptHeader = req.headers.accept ?? "";
+    if (acceptHeader.includes("text/html")) {
+      // Browser request - redirect to login
+      res.redirect("/login?session=expired");
+    } else {
+      // API request - return JSON error
+      res.status(401).json({ error: "Authentication token required" });
+    }
     return;
   }
 
   // eslint-disable-next-line @typescript-eslint/no-misused-promises
   jwt.verify(token, JWT_SECRET, async (err, decoded) => {
     if (err || !decoded || typeof decoded === "string") {
-      res.status(403).json({
-        error: "Invalid or expired token",
-        details: err?.message,
-      });
+      // Check if client expects HTML (browser page request) or JSON (API request)
+      const acceptHeader = req.headers.accept ?? "";
+      if (acceptHeader.includes("text/html")) {
+        // Browser request - redirect to login with expired session message
+        res.redirect("/login?session=expired");
+      } else {
+        // API request - return JSON error
+        res.status(403).json({
+          error: "Invalid or expired token",
+          details: err?.message,
+        });
+      }
       return;
     }
 
@@ -249,9 +265,17 @@ export async function authenticateToken(
           );
 
           if (sessions.length === 0) {
-            res.status(403).json({
-              error: "Session expired or not found",
-            });
+            // Check if client expects HTML (browser page request) or JSON (API request)
+            const acceptHeader = req.headers.accept ?? "";
+            if (acceptHeader.includes("text/html")) {
+              // Browser request - redirect to login with session expired message
+              res.redirect("/login?session=expired");
+            } else {
+              // API request - return JSON error
+              res.status(403).json({
+                error: "Session expired or not found",
+              });
+            }
             return;
           }
         }
@@ -275,7 +299,11 @@ export async function authenticateToken(
       role: user.role,
       activeRole: user.activeRole ?? user.role, // Support für Dual-Role
       isRoleSwitched: user.isRoleSwitched ?? false,
-      tenant_id: user.tenant_id ? parseInt(user.tenant_id.toString(), 10) : 0,
+      tenant_id: user.tenant_id
+        ? parseInt(user.tenant_id.toString(), 10)
+        : user.tenantId
+          ? parseInt(user.tenantId.toString(), 10)
+          : 0,
       department_id: null,
       position: null,
     };
@@ -294,7 +322,15 @@ export async function authenticateToken(
 export function authorizeRole(role: "admin" | "employee" | "root") {
   return (req: Request, res: Response, next: NextFunction): void => {
     if (!req.user) {
-      res.status(401).json({ error: "Authentication required" });
+      // Check if client expects HTML (browser page request) or JSON (API request)
+      const acceptHeader = req.headers.accept ?? "";
+      if (acceptHeader.includes("text/html")) {
+        // Browser request - redirect to login
+        res.redirect("/login?session=expired");
+      } else {
+        // API request - return JSON error
+        res.status(401).json({ error: "Authentication required" });
+      }
       return;
     }
 
@@ -319,7 +355,23 @@ export function authorizeRole(role: "admin" | "employee" | "root") {
       return;
     }
 
-    res.status(403).send("Unauthorized");
+    // Check if client expects HTML (browser page request) or JSON (API request)
+    const acceptHeader = req.headers.accept ?? "";
+    if (acceptHeader.includes("text/html")) {
+      // Browser request - redirect to appropriate dashboard based on role
+      const dashboardMap: Record<string, string> = {
+        employee: "/employee-dashboard",
+        admin: "/admin-dashboard",
+        root: "/root-dashboard",
+      };
+      const redirectPath = dashboardMap[req.user.role] ?? "/login";
+      res.redirect(`${redirectPath}?error=unauthorized`);
+    } else {
+      // API request - return JSON error
+      res
+        .status(403)
+        .json({ error: "Unauthorized - insufficient permissions" });
+    }
   };
 }
 

@@ -18,6 +18,7 @@
         root.style.setProperty('--card-padding', sidebarCollapsed ? '2rem' : '1.5rem');
       })();
     </script>
+    <script src="/feature-flags.js"></script>
     <!-- Dashboard Theme CSS -->
     <!-- Font Awesome -->
     <link rel="stylesheet" href="/styles/lib/fontawesome.min.css" />
@@ -215,6 +216,146 @@
         right: 25%;
         animation-delay: -4s;
       }
+      .floating-dot:nth-child(5) {
+        top: 80%;
+        left: 35%;
+        animation-delay: -5s;
+        width: 3px;
+        height: 3px;
+      }
+      .floating-dot:nth-child(6) {
+        top: 10%;
+        right: 40%;
+        animation-delay: -6s;
+        width: 5px;
+        height: 5px;
+      }
+      .floating-dot:nth-child(7) {
+        bottom: 20%;
+        left: 45%;
+        animation-delay: -7s;
+        width: 3px;
+        height: 3px;
+      }
+      .floating-dot:nth-child(8) {
+        top: 45%;
+        right: 5%;
+        animation-delay: -8s;
+        width: 6px;
+        height: 6px;
+      }
+      .floating-dot:nth-child(9) {
+        top: 5%;
+        left: 50%;
+        animation-delay: -2.5s;
+        width: 2px;
+        height: 2px;
+      }
+      .floating-dot:nth-child(10) {
+        bottom: 10%;
+        right: 60%;
+        animation-delay: -3.5s;
+        width: 5px;
+        height: 5px;
+      }
+      .floating-dot:nth-child(11) {
+        top: 70%;
+        left: 8%;
+        animation-delay: -4.5s;
+        width: 3px;
+        height: 3px;
+      }
+      .floating-dot:nth-child(12) {
+        top: 35%;
+        left: 60%;
+        animation-delay: -5.5s;
+        width: 4px;
+        height: 4px;
+      }
+      .floating-dot:nth-child(13) {
+        bottom: 30%;
+        left: 15%;
+        animation-delay: -1.2s;
+        width: 2px;
+        height: 2px;
+      }
+      .floating-dot:nth-child(14) {
+        top: 15%;
+        right: 30%;
+        animation-delay: -2.2s;
+        width: 6px;
+        height: 6px;
+      }
+      .floating-dot:nth-child(15) {
+        bottom: 50%;
+        right: 10%;
+        animation-delay: -3.2s;
+        width: 3px;
+        height: 3px;
+      }
+      .floating-dot:nth-child(16) {
+        top: 55%;
+        left: 25%;
+        animation-delay: -4.2s;
+        width: 5px;
+        height: 5px;
+      }
+      .floating-dot:nth-child(17) {
+        top: 25%;
+        left: 75%;
+        animation-delay: -1.8s;
+        width: 2px;
+        height: 2px;
+      }
+      .floating-dot:nth-child(18) {
+        bottom: 5%;
+        left: 55%;
+        animation-delay: -2.8s;
+        width: 4px;
+        height: 4px;
+      }
+      .floating-dot:nth-child(19) {
+        top: 85%;
+        right: 20%;
+        animation-delay: -3.8s;
+        width: 3px;
+        height: 3px;
+      }
+      .floating-dot:nth-child(20) {
+        top: 40%;
+        right: 45%;
+        animation-delay: -4.8s;
+        width: 5px;
+        height: 5px;
+      }
+      .floating-dot:nth-child(21) {
+        bottom: 25%;
+        right: 70%;
+        animation-delay: -1.5s;
+        width: 2px;
+        height: 2px;
+      }
+      .floating-dot:nth-child(22) {
+        top: 65%;
+        left: 70%;
+        animation-delay: -2.5s;
+        width: 6px;
+        height: 6px;
+      }
+      .floating-dot:nth-child(23) {
+        top: 12%;
+        left: 30%;
+        animation-delay: -3.5s;
+        width: 3px;
+        height: 3px;
+      }
+      .floating-dot:nth-child(24) {
+        bottom: 35%;
+        left: 85%;
+        animation-delay: -4.5s;
+        width: 4px;
+        height: 4px;
+      }
 
       @keyframes float {
         0%,
@@ -265,12 +406,11 @@
         left: 0;
         right: 0;
         height: 4px;
-        background: linear-gradient(90deg, var(--primary-color), var(--primary-light));
         border-radius: var(--radius-lg) var(--radius-lg) 0 0;
       }
 
       .feature-icon {
-        background: linear-gradient(135deg, var(--primary-color), var(--primary-light));
+        background: linear-gradient(0deg, rgba(33, 150, 243, 0.15), rgba(33, 150, 243, 0.08));
         width: 60px;
         height: 60px;
         border-radius: var(--radius-md);
@@ -280,7 +420,6 @@
         margin-bottom: var(--spacing-md);
         font-size: 1.5rem;
         color: white;
-        box-shadow: 0 4px 12px rgba(33, 150, 243, 0.3);
       }
 
       .feature-title {
@@ -298,9 +437,10 @@
       }
 
       .feature-badge {
-        background: var(--primary-color);
+        background: linear-gradient(0deg, rgba(33, 150, 243, 0.15), rgba(33, 150, 243, 0.08));
+        /*background: linear-gradient(0deg, rgba(33, 125, 243, 0.41), rgba(33, 150, 243, 0.47));*/
         color: white;
-        padding: var(--spacing-xs) var(--spacing-sm);
+        padding: var(--spacing-2sm);
         border-radius: var(--radius-sm);
         font-size: 0.8rem;
         font-weight: 500;
@@ -518,6 +658,7 @@
 
       .pulse {
         /* animation: pulse 2s infinite; */
+        /* Reserved for pulse animation styles */
       }
 
       @keyframes pulse {
@@ -600,6 +741,9 @@
     </style>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
     <link rel="stylesheet" href="/styles/user-info-update.css" />
+
+    <!-- Common Scripts with ApiClient -->
+    <script type="module" src="/scripts/common.js"></script>
   </head>
   <body>
     <!-- Unified Navigation -->
@@ -616,6 +760,26 @@
           <!-- Welcome Hero Section -->
           <div class="welcome-hero">
             <div class="floating-elements">
+              <div class="floating-dot"></div>
+              <div class="floating-dot"></div>
+              <div class="floating-dot"></div>
+              <div class="floating-dot"></div>
+              <div class="floating-dot"></div>
+              <div class="floating-dot"></div>
+              <div class="floating-dot"></div>
+              <div class="floating-dot"></div>
+              <div class="floating-dot"></div>
+              <div class="floating-dot"></div>
+              <div class="floating-dot"></div>
+              <div class="floating-dot"></div>
+              <div class="floating-dot"></div>
+              <div class="floating-dot"></div>
+              <div class="floating-dot"></div>
+              <div class="floating-dot"></div>
+              <div class="floating-dot"></div>
+              <div class="floating-dot"></div>
+              <div class="floating-dot"></div>
+              <div class="floating-dot"></div>
               <div class="floating-dot"></div>
               <div class="floating-dot"></div>
               <div class="floating-dot"></div>
@@ -648,10 +812,6 @@
 
           <!-- Employee Info Grid -->
           <div class="info-grid">
-            <div class="info-card">
-              <div class="info-label">Mitarbeiter-ID</div>
-              <div class="info-value" id="employee-id">-</div>
-            </div>
             <div class="info-card">
               <div class="info-label">Abteilung</div>
               <div class="info-value" id="employee-department">-</div>
@@ -774,29 +934,20 @@
 
       async function loadUserInfo() {
         try {
-          const token = localStorage.getItem('token');
-          const response = await fetch('/api/user/profile', {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          });
+          const userData = await apiClient.get('/users/me');
+          const userName = document.getElementById('user-name');
+          const userAvatar = document.getElementById('user-avatar');
 
-          if (response.ok) {
-            const userData = await response.json();
-            const userName = document.getElementById('user-name');
-            const userAvatar = document.getElementById('user-avatar');
+          // Display first and last name
+          const displayName = `${userData.firstName || ''} ${userData.lastName || ''}`.trim() || userData.username || 'Benutzer';
+          userName.textContent = displayName;
 
-            // Display first and last name
-            const displayName = `${userData.first_name || ''} ${userData.last_name || ''}`.trim() || userData.username || 'Benutzer';
-            userName.textContent = displayName;
-
-            // Update avatar if available
-            if (userData.profile_picture_url) {
-              userAvatar.src = userData.profile_picture_url;
-              userAvatar.onerror = function () {
-                this.src = '/assets/images/default-avatar.svg';
-              };
-            }
+          // Update avatar if available
+          if (userData.profilePictureUrl) {
+            userAvatar.src = userData.profilePictureUrl;
+            userAvatar.onerror = function () {
+              this.src = '/assets/images/default-avatar.svg';
+            };
           }
         } catch (error) {
           console.error('Error loading user info:', error);
@@ -826,7 +977,7 @@
           // Redirect if not employee (but allow admins and root viewing as employee)
           const isAdminAsEmployee = payload.role === 'admin' && payload.activeRole === 'employee';
           const isRootAsEmployee = payload.role === 'root' && payload.activeRole === 'employee';
-          console.log('[Employee Dashboard Auth] Role check:', {
+          console.info('[Employee Dashboard Auth] Role check:', {
             role: payload.role,
             activeRole: payload.activeRole,
             isRoleSwitched: payload.isRoleSwitched,
@@ -835,35 +986,15 @@
           });
 
           if (payload.role !== 'employee' && !isAdminAsEmployee && !isRootAsEmployee) {
-            console.log('[Employee Dashboard Auth] Redirecting - not authorized');
+            console.info('[Employee Dashboard Auth] Redirecting - not authorized');
             window.location.href = payload.role === 'admin' ? '/admin-dashboard' : payload.role === 'root' ? '/root-dashboard' : '/login';
           } else {
-            console.log('[Employee Dashboard Auth] Access granted');
+            console.info('[Employee Dashboard Auth] Access granted');
           }
         } catch (e) {
           localStorage.removeItem('token');
           window.location.href = '/login';
         }
-      }
-
-      async function apiCall(url, options = {}) {
-        const token = localStorage.getItem('token');
-        const defaultOptions = {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        };
-
-        const response = await fetch(url, { ...defaultOptions, ...options });
-
-        if (response.status === 401) {
-          localStorage.removeItem('token');
-          window.location.href = '/login';
-          return;
-        }
-
-        return response;
       }
 
       async function loadDashboardData() {
@@ -886,14 +1017,17 @@
 
       async function loadEmployeeProfile() {
         try {
-          const response = await apiCall('/api/user/profile');
-          const data = await response.json();
+          const user = await apiClient.get('/users/me');
 
-          if (data.success) {
-            const user = data.data;
-            document.getElementById('employee-id').textContent = user.employee_id || 'Nicht zugewiesen';
-            document.getElementById('employee-department').textContent = user.department || 'Nicht zugewiesen';
-            document.getElementById('employee-position').textContent = user.position || 'Mitarbeiter';
+          // employee-id element was removed, skip it
+          const deptElement = document.getElementById('employee-department');
+          if (deptElement) {
+            deptElement.textContent = user.department || 'Nicht zugewiesen';
+          }
+
+          const posElement = document.getElementById('employee-position');
+          if (posElement) {
+            posElement.textContent = user.position || 'Mitarbeiter';
           }
         } catch (error) {
           console.error('Error loading profile:', error);
@@ -1025,7 +1159,7 @@
             localStorage.setItem('userRole', userRole);
           }
 
-          console.log('[Employee Dashboard] Token analysis:', {
+          console.info('[Employee Dashboard] Token analysis:', {
             tokenRole: payload.role,
             tokenActiveRole: payload.activeRole,
             finalActiveRole: activeRole,
@@ -1041,18 +1175,18 @@
       // All users can access employee dashboard when in employee mode
       if (activeRole === 'employee') {
         // User is correctly on employee dashboard
-        console.log('[Employee Dashboard] User in employee mode');
+        console.info('[Employee Dashboard] User in employee mode');
       } else if (userRole === 'root' && activeRole === 'root') {
         // Root user in root mode - redirect to root dashboard
-        console.log('[Employee Dashboard] Root user in root mode - redirecting');
+        console.info('[Employee Dashboard] Root user in root mode - redirecting');
         window.location.replace('/root-dashboard');
       } else if ((userRole === 'admin' || userRole === 'root') && activeRole === 'admin') {
         // Admin/Root user in admin mode - redirect to admin dashboard
-        console.log('[Employee Dashboard] User in admin mode - redirecting');
+        console.info('[Employee Dashboard] User in admin mode - redirecting');
         window.location.replace('/admin-dashboard');
       } else if (!userRole) {
         // No user role - redirect to login
-        console.log('[Employee Dashboard] No user role - redirecting to login');
+        console.info('[Employee Dashboard] No user role - redirecting to login');
         window.location.replace('/login');
       }
 

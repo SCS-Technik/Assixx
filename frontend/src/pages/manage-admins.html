@@ -16,8 +16,12 @@
         root.style.setProperty('--content-margin', sidebarCollapsed ? '60px' : '250px');
       })();
     </script>
+    <script src="/feature-flags.js"></script>
 
-    <link href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@400;500;700&display=swap" rel="stylesheet" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,300;1,400;1,500;1,600;1,700;1,800&display=swap"
+      rel="stylesheet"
+    />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
     <link rel="stylesheet" href="/styles/breadcrumb-alignment.css" />
     <style>
@@ -66,8 +70,7 @@
       }
 
       .admin-table td {
-        padding-top: 15px;
-        padding-bottom: 15px;
+        padding: 12px;
         color: var(--text-secondary);
         border-bottom: 1px solid rgba(255, 255, 255, 0.05);
       }
@@ -79,13 +82,15 @@
       /* Action Buttons */
       .action-btn {
         padding: 6px 12px;
-        margin: 0 4px;
+        margin: 0 2px;
         background: rgba(255, 255, 255, 0.05);
         border: 1px solid rgba(255, 255, 255, 0.1);
         border-radius: 6px;
         color: var(--text-secondary);
         cursor: pointer;
         font-size: 12px;
+        white-space: nowrap;
+        display: inline-block;
       }
 
       .action-btn:hover {
@@ -378,7 +383,8 @@
         border-radius: 20px;
         font-size: 12px;
         font-weight: 500;
-        /*display: block ruby;*/
+        white-space: nowrap;
+        display: inline-block;
       }
 
       .status-badge.active {
@@ -494,7 +500,7 @@
         box-shadow: 0 0 20px rgba(33, 150, 243, 0.15);
       }
 
-      .radio-label input[type="radio"] {
+      .radio-label input[type='radio'] {
         appearance: none;
         width: 20px;
         height: 20px;
@@ -507,12 +513,12 @@
         flex-shrink: 0;
       }
 
-      .radio-label input[type="radio"]:checked {
+      .radio-label input[type='radio']:checked {
         border-color: var(--primary-color);
         background: rgba(33, 150, 243, 0.1);
       }
 
-      .radio-label input[type="radio"]:checked::after {
+      .radio-label input[type='radio']:checked::after {
         content: '';
         position: absolute;
         top: 50%;
@@ -568,7 +574,7 @@
         color: rgba(255, 255, 255, 0.95);
       }
 
-      .checkbox-label input[type="checkbox"] {
+      .checkbox-label input[type='checkbox'] {
         appearance: none;
         width: 18px;
         height: 18px;
@@ -581,16 +587,16 @@
         flex-shrink: 0;
       }
 
-      .checkbox-label input[type="checkbox"]:hover {
+      .checkbox-label input[type='checkbox']:hover {
         border-color: rgba(33, 150, 243, 0.5);
       }
 
-      .checkbox-label input[type="checkbox"]:checked {
+      .checkbox-label input[type='checkbox']:checked {
         background: var(--primary-color);
         border-color: var(--primary-color);
       }
 
-      .checkbox-label input[type="checkbox"]:checked::after {
+      .checkbox-label input[type='checkbox']:checked::after {
         content: '✓';
         position: absolute;
         top: 50%;
@@ -601,12 +607,12 @@
         font-weight: bold;
       }
 
-      .checkbox-label input[type="checkbox"]:disabled {
+      .checkbox-label input[type='checkbox']:disabled {
         opacity: 0.6;
         cursor: not-allowed;
       }
 
-      .checkbox-label input[type="checkbox"]:disabled ~ .checkbox-text {
+      .checkbox-label input[type='checkbox']:disabled ~ .checkbox-text {
         opacity: 0.6;
         cursor: not-allowed;
       }
@@ -615,6 +621,58 @@
         color: rgba(255, 255, 255, 0.8);
         font-size: 14px;
         transition: color 0.3s ease;
+      }
+
+      /* Actions column - ensure buttons stay inline */
+      .admin-table td:last-child {
+        white-space: nowrap;
+        min-width: 280px;
+      }
+
+      /* Responsive Styles */
+      @media (max-width: 1400px) {
+        .action-btn {
+          padding: 5px 10px;
+          font-size: 11px;
+        }
+
+        .status-badge {
+          font-size: 11px;
+          padding: 3px 10px;
+        }
+      }
+
+      @media (max-width: 1200px) {
+        .admin-table {
+          font-size: 14px;
+        }
+
+        .admin-table th,
+        .admin-table td {
+          padding: 10px 8px;
+        }
+
+        /* Make table scrollable horizontally */
+        .card-body {
+          overflow-x: auto;
+        }
+
+        .admin-table {
+          min-width: 1000px;
+        }
+      }
+
+      @media (max-width: 768px) {
+        /* On mobile, stack buttons vertically but in a controlled way */
+        .admin-table td:last-child {
+          min-width: auto;
+        }
+
+        .action-btn {
+          display: block;
+          width: 100%;
+          margin: 2px 0;
+        }
       }
     </style>
     <link rel="stylesheet" href="/styles/user-info-update.css" />
@@ -959,6 +1017,7 @@
 
     <!-- Scripts -->
     <script type="module" src="/scripts/components/unified-navigation.ts"></script>
+    <script type="module" src="/scripts/role-switch.ts"></script>
     <script type="module" src="/scripts/manage-admins.ts"></script>
 
     <!-- Breadcrumb Component -->

@@ -5,7 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Assixx - Die SaaS-Lösung für Industriefirmen</title>
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
-    <link href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@400;500;700&display=swap" rel="stylesheet" />
+    <!-- Open Sans Google Font -->
+    <link
+      href="https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,300;1,400;1,500;1,600;1,700;1,800&display=swap"
+      rel="stylesheet"
+    />
+    <!-- Import main styles with Open Sans font -->
+    <link rel="stylesheet" href="/styles/fonts-opensans.css" />
     <style>
       :root {
         /* Assixx Dark Theme - Konsistent mit Dashboard */
@@ -54,11 +60,12 @@
 
       body {
         font-family:
-          'Ubuntu',
+          'Open Sans',
           -apple-system,
           BlinkMacSystemFont,
           'Segoe UI',
           Roboto,
+          Arial,
           sans-serif;
         background: #000000;
         color: var(--text-primary);
@@ -805,6 +812,8 @@
         }
       }
     </style>
+    <!-- Feature Flags for API v2 Migration -->
+    <script src="/feature-flags.js"></script>
   </head>
   <body>
     <header class="header">
@@ -1454,29 +1463,32 @@
         const data = Object.fromEntries(formData.entries());
 
         try {
-          const response = await fetch('/api/signup', {
+          const response = await fetch('/api/v2/signup', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-              ...data,
-              admin_email: data.email,
-              admin_password: data.password,
-              admin_first_name: data.first_name,
-              admin_last_name: data.last_name,
+              companyName: data.company_name,
+              subdomain: data.subdomain,
+              email: data.company_email,
+              phone: data.phone,
+              adminEmail: data.email,
+              adminPassword: data.password,
+              adminFirstName: data.first_name,
+              adminLastName: data.last_name,
               selectedPlan: localStorage.getItem('selectedPlan') || 'premium',
             }),
           });
 
-          if (response.ok) {
-            const result = await response.json();
+          const result = await response.json();
+
+          if (result.success) {
             alert(`Erfolg! Sie können sich jetzt unter ${data.subdomain}.assixx.com anmelden.`);
             // Später: Direkte Weiterleitung mit Auto-Login
             window.location.href = `/login`;
           } else {
-            const error = await response.json();
-            alert(error.message || 'Fehler bei der Registrierung');
+            alert(result.error?.message || 'Fehler bei der Registrierung');
           }
         } catch (error) {
           alert('Ein Fehler ist aufgetreten. Bitte versuchen Sie es später erneut.');

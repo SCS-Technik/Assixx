@@ -7,6 +7,7 @@ import {
 } from "../../../utils/db";
 import { fieldMapper } from "../../../utils/fieldMapper";
 import { logger } from "../../../utils/logger";
+import { ServiceError as ServiceErrorClass } from "../../../utils/ServiceError";
 
 import {
   Feature,
@@ -20,7 +21,6 @@ import {
   DbFeature,
   DbTenantFeature,
   DbFeatureUsageStats,
-  ServiceError,
   ActivationOptions,
 } from "./types";
 
@@ -211,11 +211,10 @@ export class FeaturesService {
       // Get feature by code
       const feature = await this.getFeatureByCode(request.featureCode);
       if (!feature) {
-        const error = new Error(
+        throw new ServiceErrorClass(
+          "NOT_FOUND",
           `Feature ${request.featureCode} not found`,
-        ) as ServiceError;
-        error.statusCode = 404;
-        throw error;
+        );
       }
 
       const options: ActivationOptions = {
@@ -300,11 +299,10 @@ export class FeaturesService {
       // Get feature by code
       const feature = await this.getFeatureByCode(featureCode);
       if (!feature) {
-        const error = new Error(
+        throw new ServiceErrorClass(
+          "NOT_FOUND",
           `Feature ${featureCode} not found`,
-        ) as ServiceError;
-        error.statusCode = 404;
-        throw error;
+        );
       }
 
       const [result] = await execute<ResultSetHeader>(
@@ -317,11 +315,10 @@ export class FeaturesService {
       );
 
       if (result.affectedRows === 0) {
-        const error = new Error(
+        throw new ServiceErrorClass(
+          "NOT_FOUND",
           `Feature ${featureCode} not found for tenant`,
-        ) as ServiceError;
-        error.statusCode = 404;
-        throw error;
+        );
       }
 
       // Log the deactivation
@@ -350,11 +347,10 @@ export class FeaturesService {
       // Get feature by code
       const feature = await this.getFeatureByCode(featureCode);
       if (!feature) {
-        const error = new Error(
+        throw new ServiceErrorClass(
+          "NOT_FOUND",
           `Feature ${featureCode} not found`,
-        ) as ServiceError;
-        error.statusCode = 404;
-        throw error;
+        );
       }
 
       const [rows] = await query<DbFeatureUsageStats[]>(

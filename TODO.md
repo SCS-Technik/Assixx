@@ -1,5 +1,26 @@
 # Assixx TODO-Liste
 
+## 🚀 AKTUELLER STATUS (28.01.2025)
+
+**Gerade erledigt:**
+
+- ✅ **CALENDAR v2 API VOLLSTÄNDIG MIGRIERT UND PRODUKTIV!** 🎉
+  - ✅ Frontend komplett auf v2 API umgestellt
+  - ✅ Alle camelCase/snake_case Field-Mappings implementiert
+  - ✅ Badge-System für ungelesene Events implementiert
+  - ✅ Statusanfrage-Feature (requires_response) hinzugefügt
+  - ✅ Modal für "Neue Termine mit Statusanfrage"
+  - ✅ Automatische Farbzuweisung basierend auf Event-Ebene
+  - ✅ Privacy-Fix: Admins sehen keine privaten Events anderer mehr
+  - ✅ Feature Flag USE_API_V2_CALENDAR = true (ENABLED)
+- ✅ 31/64 Frontend-Dateien migriert (48.4%)
+
+**Nächste Schritte:**
+
+- shifts.ts migrieren (nächste Planning & Organization Datei)
+- shifts.html Templates anpassen
+- Weitere 33 Frontend-Dateien (31/64 = 48.4% fertig)
+
 ## 🎉 API v2 MIGRATION ABGESCHLOSSEN! (03.08.2025 - 01:00 Uhr) 🎉
 
 **FINALER API v2 Status:**

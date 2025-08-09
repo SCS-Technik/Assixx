@@ -1,3 +1,4 @@
+import { randomBytes } from "crypto";
 import * as fs from "fs/promises";
 import * as path from "path";
 
@@ -109,6 +110,21 @@ export class Tenant {
       const hashedPassword = await bcrypt.hash(admin_password, 10);
 
       // Create user first without employee_id but WITH phone
+      // Generate unique TEMPORARY employee number using timestamp and cryptographically secure random component
+      const timestamp = Date.now().toString().slice(-6);
+      // Generate cryptographically secure random number between 0-999 without bias
+      // We use rejection sampling to avoid modulo bias
+      let randomInt: number;
+      do {
+        const randomBuffer = randomBytes(2); // 2 bytes = 16 bits (0-65535)
+        randomInt = randomBuffer.readUInt16BE(0);
+        // Reject values >= 65000 to ensure uniform distribution when using % 1000
+        // 65000 = 65 * 1000, so values 0-64999 map uniformly to 0-999
+      } while (randomInt >= 65000);
+      randomInt = randomInt % 1000; // Now safe to use modulo without bias
+      const random = randomInt.toString().padStart(3, "0");
+      const employeeNumber = `TEMP-${timestamp}${random}`;
+
       const [userResult] = await connection.query<ResultSetHeader>(
         `INSERT INTO users (username, email, password, role, first_name, last_name, tenant_id, phone, employee_number) 
          VALUES (?, ?, ?, 'root', ?, ?, ?, ?, ?)`,
@@ -120,7 +136,7 @@ export class Tenant {
           admin_last_name,
           tenantId,
           phone,
-          "000001", // Temporäre Personalnummer für Root-User
+          employeeNumber, // Unique employee number
         ],
       );
 

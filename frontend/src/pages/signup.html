@@ -5,7 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Registrieren - Assixx</title>
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
-    <link href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@400;500;700&display=swap" rel="stylesheet" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,300;1,400;1,500;1,600;1,700;1,800&display=swap"
+      rel="stylesheet"
+    />
     <link href="https://fonts.googleapis.com/css2?family=Noto+Color+Emoji&display=swap" rel="stylesheet" />
     <style>
       @import url('/styles/dashboard-theme.css');
@@ -15,7 +18,18 @@
       /* Emoji Font Support */
       .country-option,
       #selectedFlag {
-        font-family: 'Ubuntu', 'Noto Color Emoji', 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', sans-serif;
+        font-family:
+          'Open Sans',
+          'Noto Color Emoji',
+          'Apple Color Emoji',
+          'Segoe UI Emoji',
+          'Segoe UI Symbol',
+          -apple-system,
+          BlinkMacSystemFont,
+          'Segoe UI',
+          Roboto,
+          Arial,
+          sans-serif;
       }
 
       body {
@@ -24,7 +38,7 @@
         align-items: center;
         justify-content: center;
         padding: 10px;
-        background: #121212;
+        background: #000000;
         position: relative;
         overflow-x: hidden;
       }
@@ -36,7 +50,7 @@
         left: 0;
         right: 0;
         bottom: 0;
-        background: radial-gradient(circle at 50% 50%, #1e1e1e 0%, #121212 50%, #0a0a0a 100%);
+        /*background: radial-gradient(circle at 50% 50%, #1e1e1e 0%, #121212 50%, #0a0a0a 100%);*/
         opacity: 0.9;
         z-index: -1;
       }
@@ -660,6 +674,8 @@
         }
       }
     </style>
+    <!-- Feature Flags for API v2 Migration -->
+    <script src="/feature-flags.js"></script>
   </head>
   <body>
     <!-- Back to Homepage Button -->
@@ -895,9 +911,9 @@
       }
 
       /* Pulse Animation für Logo */
-      .signup-logo {
-        /* animation: subtle-pulse 3s ease-in-out infinite; */
-      }
+      /* .signup-logo {
+        animation: subtle-pulse 3s ease-in-out infinite;
+      } */
 
       @keyframes subtle-pulse {
         0%,
@@ -1197,18 +1213,35 @@
         const phoneNumber = data.phone;
         const fullPhone = `${currentCountryCode}${phoneNumber.replace(/\s+/g, '')}`;
 
-        // Add root user credentials
-        const signupData = {
-          company_name: data.company_name,
-          subdomain: data.subdomain,
-          email: data.email,
-          admin_email: data.email,
-          admin_password: data.password,
-          admin_first_name: data.first_name,
-          admin_last_name: data.last_name,
-          phone: fullPhone,
-          plan: currentPlan,
-        };
+        // Check if v2 API should be used
+        const useV2 = window.FEATURE_FLAGS && window.FEATURE_FLAGS.USE_API_V2_SIGNUP;
+
+        // Add root user credentials - use camelCase for v2, snake_case for v1
+        const signupData = useV2
+          ? {
+              // v2 format (camelCase)
+              companyName: data.company_name,
+              subdomain: data.subdomain,
+              email: data.email,
+              adminEmail: data.email,
+              adminPassword: data.password,
+              adminFirstName: data.first_name,
+              adminLastName: data.last_name,
+              phone: fullPhone,
+              plan: currentPlan,
+            }
+          : {
+              // v1 format (snake_case)
+              company_name: data.company_name,
+              subdomain: data.subdomain,
+              email: data.email,
+              admin_email: data.email,
+              admin_password: data.password,
+              admin_first_name: data.first_name,
+              admin_last_name: data.last_name,
+              phone: fullPhone,
+              plan: currentPlan,
+            };
 
         const submitButton = e.target.querySelector('button[type="submit"]');
         const originalText = submitButton.innerHTML;
@@ -1217,7 +1250,12 @@
           submitButton.disabled = true;
           submitButton.innerHTML = '⏳ Wird erstellt...';
 
-          const response = await fetch('/api/signup', {
+          // API URL based on feature flag (useV2 already defined above)
+          const apiUrl = useV2 ? '/api/v2/signup' : '/api/signup';
+
+          console.info(`[Signup] Using ${useV2 ? 'v2' : 'v1'} API at ${apiUrl}`);
+
+          const response = await fetch(apiUrl, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -1235,7 +1273,20 @@
             result = { message: 'Server response was not valid JSON: ' + responseText };
           }
 
-          if (response.ok) {
+          // Handle v2 response format
+          if (useV2 && result.success === false) {
+            // v2 error format
+            const errorMessage = result.error?.message || result.message || 'Fehler bei der Registrierung';
+            alert(errorMessage);
+            submitButton.disabled = false;
+            submitButton.innerHTML = originalText;
+            return;
+          }
+
+          if (response.ok || (useV2 && result.success)) {
+            // Extract data from v2 response if needed
+            const responseData = useV2 && result.data ? result.data : result;
+
             document.getElementById('successMessage').style.display = 'block';
             document.getElementById('successMessage').innerHTML =
               `✅ <strong>Erfolgreich registriert!</strong> Sie werden in 3 Sekunden zur Anmeldung weitergeleitet...`;
@@ -1248,6 +1299,7 @@
               window.location.href = '/login';
             }, 3000);
           } else {
+            // v1 error handling
             alert(result.message || 'Fehler bei der Registrierung');
             submitButton.disabled = false;
             submitButton.innerHTML = originalText;

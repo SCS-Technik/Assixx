@@ -4,6 +4,7 @@
  */
 
 import type { User } from '../types/api.types';
+import { ApiClient } from '../utils/api-client';
 
 import { getAuthToken } from './auth';
 
@@ -16,15 +17,15 @@ interface AdminUser extends User {
 interface DashboardData {
   user: {
     id: number;
-    username: string;
-    role: string;
+    userName: string;
+    userRole: string;
     iat: number;
     exp: number;
   };
 }
 
 interface CreateAdminFormElements extends HTMLFormControlsCollection {
-  username: HTMLInputElement;
+  userName: HTMLInputElement;
   first_name: HTMLInputElement;
   last_name: HTMLInputElement;
   email: HTMLInputElement;
@@ -55,7 +56,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Elemente aus dem DOM holen
   const createAdminForm = document.getElementById('create-admin-form') as CreateAdminForm;
-  const logoutBtn = document.getElementById('logout-btn') as HTMLButtonElement;
+  // const logoutBtn = document.getElementById('logout-btn') as HTMLButtonElement; // Not used - handled by unified-navigation
   const dashboardContent = document.getElementById('dashboard-data') as HTMLElement;
 
   // Event-Listener hinzufügen
@@ -63,16 +64,20 @@ document.addEventListener('DOMContentLoaded', () => {
     createAdminForm.addEventListener('submit', (e) => void createAdmin(e));
   }
 
-  if (logoutBtn) {
-    logoutBtn.addEventListener('click', (e) => {
-      e.preventDefault();
-      logout().catch((error) => {
-        console.error('Logout error:', error);
-        // Fallback
-        window.location.href = '/login';
-      });
-    });
-  }
+  // Logout Button - DISABLED: Handled by unified-navigation.ts
+  // if (logoutBtn) {
+  //   logoutBtn.addEventListener('click', (e) => {
+  //     e.preventDefault();
+  //     logout().catch((error) => {
+  //       console.error('Logout error:', error);
+  //       // Fallback
+  //       window.location.href = '/login';
+  //     });
+  //   });
+  // }
+
+  // Initialize API client
+  const apiClient = ApiClient.getInstance();
 
   // Load user info in header
   void loadHeaderUserInfo();
@@ -89,20 +94,17 @@ document.addEventListener('DOMContentLoaded', () => {
   // Check if user has temporary employee number
   async function checkEmployeeNumber(): Promise<void> {
     try {
-      const response = await fetch('/api/users/me', {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      interface UserWithEmployeeNumber extends User {
+        employeeNumber?: string;
+        employee_number?: string;
+      }
 
-      if (response.ok) {
-        const data = await response.json();
-        const user = data.data ?? data.user;
+      const user = await apiClient.request<UserWithEmployeeNumber>('/users/me');
 
-        // Check if user has temporary employee number
-        if (user.employeeNumber === '000001' || user.employee_number === '000001') {
-          showEmployeeNumberModal();
-        }
+      // Check if user has temporary employee number
+      const employeeNumber = user.employeeNumber ?? user.employee_number ?? '';
+      if (employeeNumber === '000001' || employeeNumber.startsWith('TEMP-')) {
+        showEmployeeNumberModal();
       }
     } catch (error) {
       console.error('Error checking employee number:', error);
@@ -138,24 +140,15 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         try {
-          const response = await fetch('/api/users/me', {
+          await apiClient.request('/users/me', {
             method: 'PATCH',
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${token}`,
-            },
             body: JSON.stringify({ employee_number: employeeNumber }),
           });
 
-          if (response.ok) {
-            alert('Personalnummer erfolgreich gespeichert.');
-            modal.style.display = 'none';
-            // Reload to update UI
-            window.location.reload();
-          } else {
-            const error = await response.json();
-            alert(`Fehler: ${error.message ?? 'Personalnummer konnte nicht gespeichert werden.'}`);
-          }
+          alert('Personalnummer erfolgreich gespeichert.');
+          modal.style.display = 'none';
+          // Reload to update UI
+          window.location.reload();
         } catch (error) {
           console.error('Error updating employee number:', error);
           alert('Ein Fehler ist aufgetreten. Bitte versuchen Sie es später erneut.');
@@ -188,7 +181,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     const adminData = {
-      username: elements.username.value,
+      userName: elements.userName.value,
       first_name: elements.first_name.value,
       last_name: elements.last_name.value,
       email: elements.email.value,
@@ -198,26 +191,14 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     try {
-      const response = await fetch('/root/create-admin', {
+      await apiClient.request('/root/admins', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
         body: JSON.stringify(adminData),
       });
 
-      if (response.ok) {
-        await response.json();
-
-        alert('Admin erfolgreich erstellt');
-        createAdminForm.reset();
-        void loadAdmins();
-      } else {
-        const error = await response.json();
-
-        alert(`Fehler: ${error.message}`);
-      }
+      alert('Admin erfolgreich erstellt');
+      createAdminForm.reset();
+      void loadAdmins();
     } catch (error) {
       console.error('Fehler beim Erstellen des Admins:', error);
 
@@ -232,19 +213,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!dashboardContent) return;
 
     try {
-      const response = await fetch('/api/root-dashboard-data', {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (response.ok) {
-        const data: DashboardData = await response.json();
-        console.info('Dashboard data:', data);
-        dashboardContent.innerHTML = ``;
-      } else {
-        console.error('Error loading dashboard:', response.status);
-      }
+      const data: DashboardData = await apiClient.request('/root/dashboard');
+      console.info('Dashboard data:', data);
+      dashboardContent.innerHTML = ``;
     } catch (error) {
       console.error('Error loading dashboard:', error);
     }
@@ -254,34 +225,25 @@ document.addEventListener('DOMContentLoaded', () => {
   async function loadDashboardStats(): Promise<void> {
     try {
       const [adminsResponse, usersResponse] = await Promise.all([
-        fetch('/root/admins', {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-        fetch('/api/users', {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
+        apiClient.request<{ admins: AdminUser[] }>('/root/admins'),
+        apiClient.request<{ data: User[] }>('/users'),
       ]);
 
-      if (adminsResponse.ok && usersResponse.ok) {
-        const adminsData = await adminsResponse.json();
-        const usersData = await usersResponse.json();
+      const admins = adminsResponse.admins || [];
+      const users = usersResponse.data || [];
 
-        const admins: AdminUser[] = adminsData.data ?? adminsData ?? [];
-        const users: User[] = usersData.data ?? usersData ?? [];
+      // Update counters
+      const adminCount = document.getElementById('admin-count');
+      const userCount = document.getElementById('user-count');
+      const tenantCount = document.getElementById('tenant-count');
 
-        // Update counters
-        const adminCount = document.getElementById('admin-count');
-        const userCount = document.getElementById('user-count');
-        const tenantCount = document.getElementById('tenant-count');
-
-        if (adminCount && Array.isArray(admins)) {
-          adminCount.textContent = admins.length.toString();
-        }
-        if (userCount && Array.isArray(users)) {
-          userCount.textContent = users.length.toString();
-        }
-        if (tenantCount) tenantCount.textContent = '1'; // TODO: Implement tenant count
+      if (adminCount && Array.isArray(admins)) {
+        adminCount.textContent = admins.length.toString();
       }
+      if (userCount && Array.isArray(users)) {
+        userCount.textContent = users.length.toString();
+      }
+      if (tenantCount) tenantCount.textContent = '1'; // TODO: Implement tenant count
     } catch (error) {
       console.error('Error loading dashboard stats:', error);
     }
@@ -291,25 +253,15 @@ document.addEventListener('DOMContentLoaded', () => {
   async function loadAdmins(): Promise<void> {
     try {
       console.info('Loading admins...');
-      const response = await fetch('/root/admins', {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const response = await apiClient.request<{ admins: AdminUser[] }>('/root/admins');
+      const admins = response.admins || [];
+      console.info('Loaded admins:', admins);
+      displayAdmins(admins);
 
-      if (response.ok) {
-        const data = await response.json();
-        const admins: AdminUser[] = data.data ?? data ?? [];
-        console.info('Loaded admins:', admins);
-        displayAdmins(admins);
-
-        // Update admin count
-        const adminCount = document.getElementById('admin-count');
-        if (adminCount && Array.isArray(admins)) {
-          adminCount.textContent = admins.length.toString();
-        }
-      } else {
-        console.error('Error loading admins:', response.status);
+      // Update admin count
+      const adminCount = document.getElementById('admin-count');
+      if (adminCount && Array.isArray(admins)) {
+        adminCount.textContent = admins.length.toString();
       }
     } catch (error) {
       console.error('Fehler beim Laden der Admins:', error);
@@ -322,22 +274,22 @@ document.addEventListener('DOMContentLoaded', () => {
     // But keeping it to not break loadAdmins() which updates the count
   }
 
-  // Ausloggen
-  async function logout(): Promise<void> {
-    console.info('Logging out...');
+  // Ausloggen - DISABLED: Handled by unified-navigation.ts
+  // async function logout(): Promise<void> {
+  //   console.info('Logging out...');
 
-    if (confirm('Möchten Sie sich wirklich abmelden?')) {
-      try {
-        // Import and use the logout function from auth module
-        const { logout: authLogout } = await import('./auth.js');
-        await authLogout();
-      } catch (error) {
-        console.error('Logout error:', error);
-        // Fallback
-        window.location.href = '/login';
-      }
-    }
-  }
+  //   if (confirm('Möchten Sie sich wirklich abmelden?')) {
+  //     try {
+  //       // Import and use the logout function from auth module
+  //       const { logout: authLogout } = await import('./auth.js');
+  //       await authLogout();
+  //     } catch (error) {
+  //       console.error('Logout error:', error);
+  //       // Fallback
+  //       window.location.href = '/login';
+  //     }
+  //   }
+  // }
 
   // Load user info in header
   async function loadHeaderUserInfo(): Promise<void> {
@@ -351,21 +303,14 @@ document.addEventListener('DOMContentLoaded', () => {
       // Parse JWT token to get basic user info
       try {
         const payload = JSON.parse(atob(token.split('.')[1]));
-        userNameElement.textContent = payload.username ?? 'Root';
+        userNameElement.textContent = payload.userName ?? 'Root';
       } catch (e) {
         console.error('Error parsing JWT token:', e);
       }
 
       // Try to fetch full user profile for more details
-      const response = await fetch('/api/user/profile', {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (response.ok) {
-        const userData = (await response.json()) as { data?: User; user?: User } & User;
-        const user = userData.data ?? userData.user ?? userData;
+      try {
+        const user = await apiClient.request<User>('/users/me');
 
         // Update username with full name if available
         if (user.first_name || user.last_name) {
@@ -382,6 +327,8 @@ document.addEventListener('DOMContentLoaded', () => {
             this.src = '/images/default-avatar.svg';
           };
         }
+      } catch {
+        // Error is already logged in the outer catch
       }
     } catch (error) {
       console.error('Error loading user info:', error);
@@ -389,7 +336,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const user = JSON.parse(localStorage.getItem('user') ?? '{}');
       const userName = document.getElementById('user-name');
       if (userName) {
-        userName.textContent = user.username ?? 'Root';
+        userName.textContent = user.userName ?? 'Root';
       }
     }
   }
@@ -397,53 +344,60 @@ document.addEventListener('DOMContentLoaded', () => {
   // Activity Logs laden
   async function loadActivityLogs(): Promise<void> {
     try {
-      const response = await fetch('/api/logs?limit=20', {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      // Use v2 API directly via apiClient
+      interface LogEntry {
+        id: number;
+        createdAt: string;
+        action: string;
+        userName: string;
+        userRole: string;
+        details?: string;
+      }
 
-      if (response.ok) {
-        const result = await response.json();
-        const logsContainer = document.getElementById('activity-logs');
+      const result = await apiClient.request<{
+        logs?: LogEntry[];
+        data?: {
+          logs: LogEntry[];
+          pagination?: { limit: number; offset: number; total: number; hasMore: boolean };
+        };
+      }>('/logs?limit=20');
+      const logsContainer = document.getElementById('activity-logs');
 
-        if (logsContainer && result.success && result.data) {
-          const logs = result.data.logs;
+      if (logsContainer && result) {
+        // Handle both response formats (direct logs array or nested in data)
+        const logs = result.logs ?? result.data?.logs ?? [];
 
-          if (logs.length === 0) {
-            logsContainer.innerHTML =
-              '<div class="log-entry"><div class="log-details">Keine Aktivitäten vorhanden</div></div>';
-            return;
-          }
+        if (logs.length === 0) {
+          logsContainer.innerHTML =
+            '<div class="log-entry"><div class="log-details">Keine Aktivitäten vorhanden</div></div>';
+          return;
+        }
 
-          logsContainer.innerHTML = logs
-            .map(
-              (log: { created_at: string; action: string; user_name: string; user_role: string; details?: string }) => {
-                const date = new Date(log.created_at);
-                const timeString = date.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
-                const dateString = date.toLocaleDateString('de-DE', {
-                  day: '2-digit',
-                  month: '2-digit',
-                  year: 'numeric',
-                });
+        logsContainer.innerHTML = logs
+          .map((log: { createdAt: string; action: string; userName: string; userRole: string; details?: string }) => {
+            const date = new Date(log.createdAt);
+            const timeString = date.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+            const dateString = date.toLocaleDateString('de-DE', {
+              day: '2-digit',
+              month: '2-digit',
+              year: 'numeric',
+            });
 
-                return `
+            return `
               <div class="log-entry" onclick="window.location.href = "/logs"">
                 <div class="log-entry-header">
                   <div class="log-action">${getActionLabel(log.action)}</div>
                   <div class="log-timestamp">${dateString} ${timeString}</div>
                 </div>
                 <div class="log-details">
-                  <span class="log-user">${log.user_name}</span>
-                  <span style="color: var(--text-secondary);">(${getRoleLabel(log.user_role)})</span>
+                  <span class="log-user">${log.userName}</span>
+                  <span class="role-badge role-${log.userRole}">${getuserRoleLabel(log.userRole)}</span>
                   ${log.details ? ` - ${log.details}` : ''}
                 </div>
               </div>
             `;
-              },
-            )
-            .join('');
-        }
+          })
+          .join('');
       }
     } catch (error) {
       console.error('Error loading activity logs:', error);
@@ -467,13 +421,13 @@ document.addEventListener('DOMContentLoaded', () => {
     return actionLabels[action] ?? action;
   }
 
-  // Helper function to get readable role labels
-  function getRoleLabel(role: string): string {
-    const roleLabels: { [key: string]: string } = {
+  // Helper function to get readable userRole labels
+  function getuserRoleLabel(userRole: string): string {
+    const userRoleLabels: { [key: string]: string } = {
       root: 'Root',
       admin: 'Admin',
       employee: 'Mitarbeiter',
     };
-    return roleLabels[role] ?? role;
+    return userRoleLabels[userRole] ?? userRole;
   }
 });

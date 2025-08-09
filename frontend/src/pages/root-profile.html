@@ -20,7 +20,11 @@
         document.documentElement.style.setProperty('--card-padding', sidebarCollapsed ? '2rem' : '1.5rem');
       })();
     </script>
-    <link href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@400;500;700&display=swap" rel="stylesheet" />
+    <script src="/feature-flags.js"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,300;1,400;1,500;1,600;1,700;1,800&display=swap"
+      rel="stylesheet"
+    />
     <style>
       @import url('/styles/dashboard-theme.css');
       @import url('/styles/breadcrumb-alignment.css');
@@ -737,7 +741,6 @@
       .btn-secondary:hover {
         background: rgba(255, 255, 255, 0.1);
         border-color: rgba(255, 255, 255, 0.3);
-        transform: translateY(-2px);
       }
 
       /* Responsive */
@@ -896,6 +899,7 @@
 
     <!-- JavaScript -->
     <script type="module" src="/scripts/components/unified-navigation.ts"></script>
+    <script type="module" src="/scripts/role-switch.ts"></script>
     <script>
       // Authentication Check
       const token = localStorage.getItem('token');
@@ -932,7 +936,10 @@
       // Load current profile data
       async function loadProfile() {
         try {
-          const response = await fetch('/api/user/profile', {
+          const useV2Users = window.FEATURE_FLAGS?.USE_API_V2_USERS;
+          const endpoint = useV2Users ? '/api/v2/users/me' : '/api/user/profile';
+
+          const response = await fetch(endpoint, {
             headers: {
               Authorization: `Bearer ${token}`,
             },
@@ -940,32 +947,35 @@
 
           if (response.ok) {
             const data = await response.json();
-            console.log('[Root Profile] API Response:', data);
+            console.info('[Root Profile] API Response:', data);
 
             // Handle different response formats
             const user = data.data || data.user || data;
 
+            // Handle both camelCase (v2) and snake_case (v1)
+            const firstName = user.firstName || user.first_name || '';
+            const lastName = user.lastName || user.last_name || '';
+            const profilePicture = user.profilePictureUrl || user.profile_picture || '';
+
             // Fill form fields
             document.getElementById('email').value = user.email || '';
-            document.getElementById('first_name').value = user.first_name || '';
-            document.getElementById('last_name').value = user.last_name || '';
+            document.getElementById('first_name').value = firstName;
+            document.getElementById('last_name').value = lastName;
 
             // Load profile picture if exists
-            if (user.profile_picture) {
-              displayProfilePicture(user.profile_picture);
+            if (profilePicture) {
+              displayProfilePicture(profilePicture);
               // Header wird automatisch durch header-user-info.ts aktualisiert
             } else {
               // Show initials if no profile picture
               const container = document.getElementById('profile-picture-display');
               if (container) {
-                const firstName = user.first_name || '';
-                const lastName = user.last_name || '';
                 const firstInitial = firstName.charAt(0).toUpperCase() || '';
                 const lastInitial = lastName.charAt(0).toUpperCase() || '';
                 const initials = firstInitial || lastInitial ? `${firstInitial}${lastInitial}` : 'U';
 
-                console.log('[Root Profile] User data:', user);
-                console.log('[Root Profile] Setting initials:', { firstName, lastName, initials });
+                console.info('[Root Profile] User data:', user);
+                console.info('[Root Profile] Setting initials:', { firstName, lastName, initials });
                 container.classList.add('avatar-initials');
                 container.innerHTML = initials;
               }
@@ -991,7 +1001,10 @@
             const data = Object.fromEntries(formData);
 
             try {
-              const response = await fetch('/api/user/profile', {
+              const useV2Users = window.FEATURE_FLAGS?.USE_API_V2_USERS;
+              const endpoint = useV2Users ? '/api/v2/users/me/profile' : '/api/user/profile';
+
+              const response = await fetch(endpoint, {
                 method: 'PUT',
                 headers: {
                   'Content-Type': 'application/json',
@@ -1035,7 +1048,10 @@
             const data = Object.fromEntries(formData);
 
             try {
-              const response = await fetch('/api/users/profile/password', {
+              const useV2Users = window.FEATURE_FLAGS?.USE_API_V2_USERS;
+              const endpoint = useV2Users ? '/api/v2/users/me/password' : '/api/users/profile/password';
+
+              const response = await fetch(endpoint, {
                 method: 'PUT',
                 headers: {
                   'Content-Type': 'application/json',
@@ -1073,7 +1089,10 @@
             formData.append('profilePicture', file);
 
             try {
-              const response = await fetch('/api/user/profile-picture', {
+              const useV2Users = window.FEATURE_FLAGS?.USE_API_V2_USERS;
+              const endpoint = useV2Users ? '/api/v2/users/me/profile-picture' : '/api/user/profile-picture';
+
+              const response = await fetch(endpoint, {
                 method: 'POST',
                 headers: {
                   Authorization: `Bearer ${token}`,
@@ -1102,7 +1121,10 @@
             if (!confirm('Möchten Sie Ihr Profilbild wirklich entfernen?')) return;
 
             try {
-              const response = await fetch('/api/user/profile-picture', {
+              const useV2Users = window.FEATURE_FLAGS?.USE_API_V2_USERS;
+              const endpoint = useV2Users ? '/api/v2/users/me/profile-picture' : '/api/user/profile-picture';
+
+              const response = await fetch(endpoint, {
                 method: 'DELETE',
                 headers: {
                   Authorization: `Bearer ${token}`,
@@ -1203,7 +1225,10 @@
       // Approval Functions
       async function loadPendingApprovals() {
         try {
-          const response = await fetch('/api/root/deletion-approvals/pending', {
+          const useV2Root = window.FEATURE_FLAGS?.USE_API_V2_ROOT;
+          const endpoint = useV2Root ? '/api/v2/root/deletion-approvals/pending' : '/api/root/deletion-approvals/pending';
+
+          const response = await fetch(endpoint, {
             headers: {
               Authorization: `Bearer ${token}`,
             },
@@ -1212,7 +1237,7 @@
           if (!response.ok) throw new Error('Failed to load approvals');
 
           const data = await response.json();
-          console.log('Deletion approvals response:', data);
+          console.info('Deletion approvals response:', data);
 
           let approvals = [];
           if (data && data.success && Array.isArray(data.data)) {
@@ -1221,7 +1246,7 @@
             approvals = data;
           }
 
-          console.log('Processed approvals:', approvals);
+          console.info('Processed approvals:', approvals);
 
           const approvalSection = document.getElementById('approvalSection');
           const approvalList = document.getElementById('approvalList');
@@ -1299,7 +1324,12 @@
         }
 
         try {
-          const response = await fetch(`/api/root/deletion-approvals/${queueId}/approve`, {
+          const useV2Root = window.FEATURE_FLAGS?.USE_API_V2_ROOT;
+          const endpoint = useV2Root
+            ? `/api/v2/root/deletion-approvals/${queueId}/approve`
+            : `/api/root/deletion-approvals/${queueId}/approve`;
+
+          const response = await fetch(endpoint, {
             method: 'POST',
             headers: {
               Authorization: `Bearer ${token}`,
@@ -1325,7 +1355,12 @@
         if (!reason) return;
 
         try {
-          const response = await fetch(`/api/root/deletion-approvals/${queueId}/reject`, {
+          const useV2Root = window.FEATURE_FLAGS?.USE_API_V2_ROOT;
+          const endpoint = useV2Root
+            ? `/api/v2/root/deletion-approvals/${queueId}/reject`
+            : `/api/root/deletion-approvals/${queueId}/reject`;
+
+          const response = await fetch(endpoint, {
             method: 'POST',
             headers: {
               Authorization: `Bearer ${token}`,

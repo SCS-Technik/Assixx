@@ -177,7 +177,14 @@ docker-compose ps && curl -s http://localhost:3000/health | jq '.'
 7. README.md
 8. Database Migration Guide
 9. BEFORE-STARTING-DEV befolgen (Anleitung lesen und Befehle durchführen)!!!!
-10. Entwicklung beginnen
+10. DAILY-PROGRESS.md lesen
+11. Lies API-V2-MIGRATION-MASTERPLAN.md
+12. Lies API-V2-MASTERPLAN-CHECKLIST.md
+13. Lies API-V2-MIGRATION-EXECUTIVE-SUMMARY.md
+14. Lies API-V2-FRONTEND-MIGRATION-DETAILS.md
+15. Lies workshop-decisions.md
+16. Lies API-DESIGN-WORKSHOP-PLAN.md
+17. Entwicklung beginnen
 
 ## 📊 FORTSCHRITTS-DOKUMENTATION (NEU! WICHTIG!)
 
@@ -300,7 +307,7 @@ docker logs -f assixx-backend
 docker exec assixx-backend pnpm run type-check
 docker exec assixx-backend pnpm run lint:fix
 docker exec assixx-backend pnpm run format
-docker exec assixx-backend pnpm run build:ts
+docker exec assixx-backend pnpm run build
 ```
 
 ### Git

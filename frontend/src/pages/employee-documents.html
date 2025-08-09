@@ -561,7 +561,9 @@
         // Funktionen
         async function loadDocuments() {
           try {
-            const response = await fetch('/api/employee/documents', {
+            const useV2Documents = window.FEATURE_FLAGS?.USE_API_V2_DOCUMENTS;
+            const endpoint = useV2Documents ? '/api/v2/documents/employee' : '/api/employee/documents';
+            const response = await fetch(endpoint, {
               headers: {
                 Authorization: `Bearer ${localStorage.getItem('token')}`,
               },
@@ -586,7 +588,11 @@
 
           if (query) {
             try {
-              const response = await fetch(`/api/employee/search-documents?query=${encodeURIComponent(query)}`, {
+              const useV2Documents = window.FEATURE_FLAGS?.USE_API_V2_DOCUMENTS;
+              const endpoint = useV2Documents
+                ? `/api/v2/documents/employee/search?query=${encodeURIComponent(query)}`
+                : `/api/employee/search-documents?query=${encodeURIComponent(query)}`;
+              const response = await fetch(endpoint, {
                 headers: {
                   Authorization: `Bearer ${localStorage.getItem('token')}`,
                 },
@@ -659,7 +665,7 @@
 
                   const docId = this.getAttribute('data-document-id');
                   if (docId) {
-                    console.log(`Download-Button geklickt für Dokument ID: ${docId}`);
+                    console.info(`Download-Button geklickt für Dokument ID: ${docId}`);
                     openDocumentInNewTab(docId);
                   }
                 });
@@ -670,7 +676,7 @@
 
         // Dokument per Blob-API herunterladen
         function openDocumentInNewTab(documentId) {
-          console.log(`Starte Download für Dokument mit ID ${documentId}`);
+          console.info(`Starte Download für Dokument mit ID ${documentId}`);
 
           // Den Token aus dem localStorage holen
           const token = localStorage.getItem('token');
@@ -750,7 +756,7 @@
         // Für Kompatibilität mit bestehendem Code behalten wir die globale Funktion bei
         window.downloadDocument = function (documentId) {
           try {
-            console.log(`Globale Funktion: Starte Download für Dokument ID: ${documentId}`);
+            console.info(`Globale Funktion: Starte Download für Dokument ID: ${documentId}`);
             openDocumentInNewTab(documentId); // Verwende unsere verbesserte Funktion
           } catch (error) {
             console.error('Fehler beim Herunterladen des Dokuments:', error);

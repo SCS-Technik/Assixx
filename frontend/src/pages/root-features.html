@@ -20,7 +20,11 @@
         document.documentElement.style.setProperty('--card-padding', sidebarCollapsed ? '2rem' : '1.5rem');
       })();
     </script>
-    <link href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@400;500;700&display=swap" rel="stylesheet" />
+    <script src="/feature-flags.js"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,300;1,400;1,500;1,600;1,700;1,800&display=swap"
+      rel="stylesheet"
+    />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
     <link rel="stylesheet" href="/styles/user-info-update.css" />
     <link rel="stylesheet" href="/styles/breadcrumb-alignment.css" />
@@ -915,6 +919,7 @@
 
     <!-- Scripts -->
     <script type="module" src="/scripts/components/unified-navigation.ts"></script>
+    <script type="module" src="/scripts/role-switch.ts"></script>
     <script>
       // Plan data will be loaded from API
       let plans = {
@@ -1081,7 +1086,7 @@
           }
 
           const plansData = await plansResponse.json();
-          console.log('Loaded plans response:', plansData);
+          console.info('Loaded plans response:', plansData);
 
           // Extract the data array from the response
           allPlans = plansData.data || plansData;
@@ -1122,7 +1127,7 @@
             tenantAddons = {};
           } else {
             const currentPlanData = await currentPlanResponse.json();
-            console.log('Current plan data:', currentPlanData);
+            console.info('Current plan data:', currentPlanData);
 
             if (currentPlanData.plan && currentPlanData.plan.plan_code) {
               currentPlan = currentPlanData.plan.plan_code;
@@ -1172,7 +1177,7 @@
             headers: { Authorization: `Bearer ${token}` },
           });
           const featuresData = await response.json();
-          console.log('Loaded tenant features response:', featuresData);
+          console.info('Loaded tenant features response:', featuresData);
 
           // Extract the data array from the response
           const features = featuresData.data || featuresData;
@@ -1251,7 +1256,7 @@
                   const isActive = feature.active;
 
                   return `
-                  <div class="feature-card ${isActive ? 'active' : ''} ${!canActivate ? 'locked' : ''}" 
+                  <div class="feature-card ${isActive ? 'active' : ''} ${!canActivate ? 'locked' : ''}"
                        data-feature="${feature.code}"
                        data-min-plan="${feature.minPlan}">
                     <span class="feature-status ${isActive ? 'status-active' : !canActivate ? 'status-locked' : 'status-inactive'}">

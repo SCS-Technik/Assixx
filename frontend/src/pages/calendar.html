@@ -10,6 +10,7 @@
     <link rel="stylesheet" href="/styles/lib/fullcalendar.min.css" />
     <!-- Calendar spezifische Styles -->
     <link rel="stylesheet" href="/styles/calendar.css" />
+    <script src="/feature-flags.js"></script>
     <style>
       @import url('/styles/dashboard-theme.css');
       @import url('/styles/breadcrumb-alignment.css');
@@ -42,6 +43,7 @@
         backdrop-filter: blur(20px) saturate(180%);
         border: 1px solid rgba(255, 255, 255, 0.1);
         box-shadow: var(--shadow-sm);
+        margin-top: auto;
         /* animation: fadeInUp 0.6s ease-out; */
       }
 
@@ -53,6 +55,7 @@
         box-shadow: var(--shadow-sm);
         border-radius: var(--radius-md);
         padding: var(--spacing-lg);
+        margin-bottom: auto;
       }
 
       /* Calendar Events - Glassmorphismus */
@@ -365,12 +368,13 @@
             <div class="card-body">
               <div class="flex gap-4 flex-wrap">
                 <div class="form-group">
-                  <label for="levelFilter" class="form-label">Ebene</label>
+                  <label for="levelFilter" class="form-label">Filter</label>
                   <div class="tab-navigation mb-2" id="levelFilter">
-                    <button class="tab-btn active" data-value="all" id="filterAll">Alle</button>
+                    <button class="tab-btn active" data-value="all" id="filterAll">Gesamt</button>
                     <button class="tab-btn" data-value="company" id="filterCompany">Firma</button>
                     <button class="tab-btn" data-value="department" id="filterDepartment">Abteilung</button>
                     <button class="tab-btn" data-value="team" id="filterTeam">Team</button>
+                    <button class="tab-btn" data-value="personal" id="filterPersonal">Meine</button>
                   </div>
                 </div>
 
@@ -412,7 +416,21 @@
           </div>
 
           <!-- Calendar Container -->
-          <div class="card calendar-card mb-4">
+          <div class="card calendar-card mb-4" id="calendarContainer">
+            <div class="card-header">
+              <div class="flex flex-between align-center">
+                <h3 class="card-title">Kalender</h3>
+                <div style="display: flex; gap: 10px; align-items: center">
+                  <button id="fullscreenBtn" class="zoom-btn" title="Vollbild">
+                    <i class="fas fa-expand"></i>
+                  </button>
+                  <button id="newCalendarEventBtn" class="btn btn-primary u-m-0" style="display: inline-flex">
+                    <i class="fas fa-plus me-2"></i>
+                    Neuer Eintrag
+                  </button>
+                </div>
+              </div>
+            </div>
             <div class="card-body p-0">
               <div id="calendar"></div>
             </div>
@@ -451,9 +469,9 @@
       // Definiere DashboardUI direkt hier, um Abhängigkeiten zu vermeiden
       window.DashboardUI = {
         openModal: function (modalId) {
-          console.log('DashboardUI.openModal called for:', modalId);
+          console.info('DashboardUI.openModal called for:', modalId);
           const modal = document.getElementById(modalId);
-          console.log('Modal element found:', !!modal);
+          console.info('Modal element found:', !!modal);
           if (modal) {
             // Entferne zuerst die inline styles
             modal.style.display = '';
@@ -461,7 +479,7 @@
             modal.style.visibility = '';
             // Dann füge active Klasse hinzu
             modal.classList.add('active');
-            console.log('Modal classes after open:', modal.className);
+            console.info('Modal classes after open:', modal.className);
           }
         },
         closeModal: function (modalId) {
@@ -536,8 +554,6 @@
       }
     </style>
     <!-- Calendar Scripts -->
-    <!-- Unified Navigation -->
-    <script type="module" src="/scripts/components/unified-navigation.ts"></script>
 
     <!-- MutationObserver zum Schutz der Header-Struktur -->
     <script>
@@ -559,7 +575,7 @@
                 const currentRoleIndicator = document.getElementById('role-indicator');
 
                 if (!currentAvatar || !currentUserName || !currentRoleIndicator) {
-                  console.log('[Calendar] Restoring user-info elements');
+                  console.info('[Calendar] Restoring user-info elements');
                   userInfoDiv.innerHTML = '';
 
                   // Avatar wiederherstellen
@@ -595,6 +611,7 @@
     <script type="module" src="/scripts/calendar.ts"></script>
     <!-- Unified Navigation -->
     <script type="module" src="/scripts/components/unified-navigation.ts"></script>
+    <script type="module" src="/scripts/role-switch.ts"></script>
     <!-- Breadcrumb -->
     <script type="module" src="/scripts/components/breadcrumb.js"></script>
   </body>

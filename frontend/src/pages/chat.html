@@ -20,6 +20,7 @@
         document.documentElement.style.setProperty('--card-padding', sidebarCollapsed ? '2rem' : '1.5rem');
       })();
     </script>
+    <script src="/feature-flags.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
     <style>
       @import url('/styles/dashboard-theme.css');
@@ -95,10 +96,11 @@
         padding: var(--spacing-md);
         border-bottom: 1px solid rgba(255, 255, 255, 0.1);
         padding-bottom: 8px;
-        background: rgba(33, 150, 243, 0.1);
         display: flex;
         align-items: center;
         gap: var(--spacing-md);
+        background: rgba(33, 145, 243, 0.88);
+        border-radius: 10px 10px 0 0;
       }
 
       .chat-title {
@@ -114,9 +116,9 @@
 
       .new-chat-btn {
         background: linear-gradient(135deg, #2196f300, #42a5f500);
-        border: 2px solid hsla(205.4, 100%, 50%, 0.87);
+        border: 2px solid hsla(0, 0%, 100%, 0.87);
         border-radius: 50%;
-        color: #3f8bff;
+        color: #ffffff;
         cursor: pointer;
         flex-shrink: 0;
         font-weight: 500;
@@ -138,20 +140,18 @@
       .conversations-list {
         flex: 1;
         overflow-y: auto;
-        padding: var(--spacing-sm);
       }
 
       .conversation-item {
         display: flex;
         align-items: center;
-        gap: 10px;
-        padding: 10px;
-        margin-bottom: 4px;
-        border-radius: 12px;
+        gap: 12px;
         cursor: pointer;
-        border: 1px solid transparent;
+        /*border: 1px solid transparent;*/
         position: relative;
         overflow: hidden;
+        border-bottom: 1px solid var(--border-color);
+        padding: 10px 0 10px 0;
       }
 
       .conversation-item:hover {
@@ -180,6 +180,7 @@
         flex-shrink: 0;
         position: relative;
         overflow: hidden;
+        margin-left: 10px;
       }
 
       /* Remove background when image is present */
@@ -231,8 +232,8 @@
       }
 
       .conversation-time {
-        font-size: 0.7rem;
         color: var(--text-secondary);
+        margin-right: 10px;
       }
 
       .unread-badge {
@@ -246,6 +247,47 @@
         justify-content: center;
         font-size: 0.7rem;
         font-weight: 600;
+      }
+
+      /* Unread conversation styling */
+      .conversation-item.unread {
+        background: linear-gradient(90deg, rgba(33, 150, 243, 0.25), rgba(33, 149, 243, 0));
+        border-left: 3px solid var(--primary-color);
+        padding-left: 7px; /* Adjust padding to compensate for border */
+      }
+
+      .conversation-item.unread:hover {
+        background: linear-gradient(90deg, rgba(33, 150, 243, 0.15) 0%, rgba(33, 150, 243, 0.08) 100%);
+      }
+
+      /* Unread count badge in conversation list */
+      .unread-count {
+        background: linear-gradient(0deg, rgba(243, 33, 33, 0.71), rgba(243, 33, 33, 0.76));
+        color: white;
+        border-radius: 50px;
+        min-width: 30px;
+        height: 20px;
+        padding: 0 6px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.7rem;
+        font-weight: bold;
+        animation: pulse 4s infinite;
+        margin-right: 16px;
+        margin-top: 5px;
+      }
+
+      @keyframes pulse {
+        0% {
+          box-shadow: 0 0 0 0 rgba(255, 68, 68, 0.7);
+        }
+        70% {
+          box-shadow: 0 0 0 10px rgba(255, 68, 68, 0);
+        }
+        100% {
+          box-shadow: 0 0 0 0 rgba(255, 68, 68, 0);
+        }
       }
 
       /* Main Chat Area */
@@ -993,7 +1035,7 @@
         left: 0;
         width: 100%;
         height: 100%;
-        background: rgba(0, 0, 0, 0.7);
+        /*background: rgba(0, 0, 0, 0.7);*/
         backdrop-filter: blur(10px);
         -webkit-backdrop-filter: blur(10px);
         z-index: 1000;
@@ -1050,7 +1092,9 @@
         margin-bottom: var(--spacing-lg);
       }
 
-      .modal-footer {
+      /* Chat modal specific footer styling - scoped to avoid conflicts */
+      #newChatModal .modal-footer,
+      #attachmentModal .modal-footer {
         display: flex;
         gap: var(--spacing-md);
         justify-content: flex-end;
@@ -1467,6 +1511,7 @@
       }
 
       .dropdown-display svg {
+        transition: transform 0.2s ease;
       }
 
       .dropdown-options {
@@ -1818,16 +1863,17 @@
 
     <!-- Scripts -->
     <script type="module" src="/scripts/components/unified-navigation.ts"></script>
+    <script type="module" src="/scripts/role-switch.ts"></script>
     <script type="module" src="/scripts/chat.ts"></script>
     <script type="module">
       document.addEventListener('DOMContentLoaded', function () {
-        console.log('🚀 Chat-Seite wird initialisiert...');
+        console.info('🚀 Chat-Seite wird initialisiert...');
 
         // 1. Navigation laden
         if (typeof loadNavigation === 'function') {
           loadNavigation();
         } else {
-          console.log('Navigation wird geladen...');
+          console.info('Navigation wird geladen...');
           setTimeout(() => {
             if (window.UnifiedNavigation) {
               new window.UnifiedNavigation();
@@ -1836,7 +1882,7 @@
         }
 
         // Event-Listener werden bereits in chat.ts hinzugefügt
-        console.log('🎯 Event-Listener werden durch chat.ts verwaltet');
+        console.info('🎯 Event-Listener werden durch chat.ts verwaltet');
       });
 
       // Custom Delivery Select Functions
@@ -1867,7 +1913,7 @@
         document.querySelector('.custom-delivery-select').classList.remove('active');
 
         // Log selection
-        console.log('📅 Delivery option selected:', value);
+        console.info('📅 Delivery option selected:', value);
       }
 
       // Toggle Chat Dropdown
@@ -1902,7 +1948,7 @@
         display.classList.remove('active');
         document.getElementById(type + 'Dropdown').classList.remove('active');
 
-        console.log(`✅ ${type} selected:`, { value, text, meta });
+        console.info(`✅ ${type} selected:`, { value, text, meta });
 
         // Handle specific dropdown types
         if (type === 'department' && value) {

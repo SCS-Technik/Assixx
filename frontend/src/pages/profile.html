@@ -20,6 +20,7 @@
         document.documentElement.style.setProperty('--card-padding', sidebarCollapsed ? '2rem' : '1.5rem');
       })();
     </script>
+    <script src="/feature-flags.js"></script>
     <link rel="stylesheet" href="/styles/lib/fontawesome.min.css" />
     <style>
       @import url('/styles/dashboard-theme.css');
@@ -637,6 +638,7 @@
 
     <!-- Scripts -->
     <script type="module" src="/scripts/components/unified-navigation.ts"></script>
+    <script type="module" src="/scripts/role-switch.ts"></script>
 
     <!-- Breadcrumb Component -->
     <script type="module">
@@ -696,7 +698,10 @@
       async function loadUserProfile() {
         try {
           const token = localStorage.getItem('token');
-          const response = await fetch('/api/user/profile', {
+          const useV2Users = window.FEATURE_FLAGS?.USE_API_V2_USERS;
+          const endpoint = useV2Users ? '/api/v2/users/me' : '/api/user/profile';
+
+          const response = await fetch(endpoint, {
             headers: {
               Authorization: `Bearer ${token}`,
             },
@@ -704,7 +709,7 @@
 
           if (response.ok) {
             const data = await response.json();
-            currentUser = data.data;
+            currentUser = useV2Users ? data.data : data.data || data;
             populateProfile(currentUser);
           } else {
             showAlert('Fehler beim Laden des Profils', 'error');
@@ -787,7 +792,10 @@
           formData.append('company', document.getElementById('company').value);
           formData.append('notes', document.getElementById('notes').value);
 
-          const response = await fetch('/api/users/profile/update', {
+          const useV2Users = window.FEATURE_FLAGS?.USE_API_V2_USERS;
+          const endpoint = useV2Users ? '/api/v2/users/me/profile' : '/api/users/profile/update';
+
+          const response = await fetch(endpoint, {
             method: 'PUT',
             headers: {
               Authorization: `Bearer ${token}`,
@@ -825,7 +833,10 @@
 
         try {
           const token = localStorage.getItem('token');
-          const response = await fetch('/api/users/profile/password', {
+          const useV2Users = window.FEATURE_FLAGS?.USE_API_V2_USERS;
+          const endpoint = useV2Users ? '/api/v2/users/me/password' : '/api/users/profile/password';
+
+          const response = await fetch(endpoint, {
             method: 'PUT',
             headers: {
               'Content-Type': 'application/json',
@@ -870,7 +881,10 @@
           const formData = new FormData();
           formData.append('profile_picture', file);
 
-          const response = await fetch('/api/users/profile/picture', {
+          const useV2Users = window.FEATURE_FLAGS?.USE_API_V2_USERS;
+          const endpoint = useV2Users ? '/api/v2/users/me/profile-picture' : '/api/users/profile/picture';
+
+          const response = await fetch(endpoint, {
             method: 'POST',
             headers: {
               Authorization: `Bearer ${token}`,
