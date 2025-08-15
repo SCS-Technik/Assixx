@@ -123,11 +123,15 @@ export class AuditTrailService {
       conditions.push("user_id = ?");
       params.push(userId);
     }
-    if (action) {
+    if (action !== null && action !== undefined && action !== "") {
       conditions.push("action = ?");
       params.push(action);
     }
-    if (resourceType) {
+    if (
+      resourceType !== null &&
+      resourceType !== undefined &&
+      resourceType !== ""
+    ) {
       conditions.push("resource_type = ?");
       params.push(resourceType);
     }
@@ -139,15 +143,15 @@ export class AuditTrailService {
       conditions.push("status = ?");
       params.push(status);
     }
-    if (dateFrom) {
+    if (dateFrom !== null && dateFrom !== undefined && dateFrom !== "") {
       conditions.push("created_at >= ?");
       params.push(dateFrom);
     }
-    if (dateTo) {
+    if (dateTo !== null && dateTo !== undefined && dateTo !== "") {
       conditions.push("created_at <= ?");
       params.push(dateTo);
     }
-    if (search) {
+    if (search !== null && search !== undefined && search !== "") {
       conditions.push(
         "(user_name LIKE ? OR resource_name LIKE ? OR action LIKE ?)",
       );
@@ -171,11 +175,13 @@ export class AuditTrailService {
       "user_id",
       "resource_type",
     ];
-    const orderBy = validSortFields.includes(sortBy) ? sortBy : "created_at";
+    const orderBy = validSortFields.includes(sortBy)
+      ? sortBy !== null && sortBy !== undefined
+      : "created_at";
     const order = sortOrder === "asc" ? "ASC" : "DESC";
 
     // Debug logging
-    console.log("[Audit Trail Service] Query params:", {
+    console.info("[Audit Trail Service] Query params:", {
       whereClause,
       params,
       limit,
@@ -184,7 +190,7 @@ export class AuditTrailService {
     });
 
     const [rows] = await query<DbAuditEntry[]>(
-      `SELECT * FROM audit_trail 
+      `SELECT * FROM audit_trail
        WHERE ${whereClause}
        ORDER BY ${orderBy} ${order}
        LIMIT ? OFFSET ?`,
@@ -221,11 +227,11 @@ export class AuditTrailService {
     const conditions: string[] = ["tenant_id = ?"];
     const params: (string | number | Date)[] = [tenantId];
 
-    if (dateFrom) {
+    if (dateFrom !== null && dateFrom !== undefined && dateFrom !== "") {
       conditions.push("created_at >= ?");
       params.push(dateFrom);
     }
-    if (dateTo) {
+    if (dateTo !== null && dateTo !== undefined && dateTo !== "") {
       conditions.push("created_at <= ?");
       params.push(dateTo);
     }
@@ -240,8 +246,8 @@ export class AuditTrailService {
 
     // Get counts by action
     const [actionRows] = await execute<RowDataPacket[]>(
-      `SELECT action, COUNT(*) as count 
-       FROM audit_trail 
+      `SELECT action, COUNT(*) as count
+       FROM audit_trail
        WHERE ${whereClause}
        GROUP BY action`,
       params,
@@ -249,8 +255,8 @@ export class AuditTrailService {
 
     // Get counts by resource type
     const [resourceRows] = await execute<RowDataPacket[]>(
-      `SELECT resource_type, COUNT(*) as count 
-       FROM audit_trail 
+      `SELECT resource_type, COUNT(*) as count
+       FROM audit_trail
        WHERE ${whereClause}
        GROUP BY resource_type`,
       params,
@@ -258,8 +264,8 @@ export class AuditTrailService {
 
     // Get top users by activity
     const [userRows] = await execute<RowDataPacket[]>(
-      `SELECT user_id, user_name, COUNT(*) as count 
-       FROM audit_trail 
+      `SELECT user_id, user_name, COUNT(*) as count
+       FROM audit_trail
        WHERE ${whereClause}
        GROUP BY user_id, user_name
        ORDER BY count DESC
@@ -269,8 +275,8 @@ export class AuditTrailService {
 
     // Get counts by status
     const [statusRows] = await execute<RowDataPacket[]>(
-      `SELECT status, COUNT(*) as count 
-       FROM audit_trail 
+      `SELECT status, COUNT(*) as count
+       FROM audit_trail
        WHERE ${whereClause}
        GROUP BY status`,
       params,
@@ -360,7 +366,7 @@ export class AuditTrailService {
 
     // Get entries
     const [rows] = await execute<DbAuditEntry[]>(
-      `SELECT * FROM audit_trail 
+      `SELECT * FROM audit_trail
        WHERE ${whereClause}
        ORDER BY created_at DESC`,
       params,

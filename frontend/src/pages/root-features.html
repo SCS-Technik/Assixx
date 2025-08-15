@@ -20,7 +20,8 @@
         document.documentElement.style.setProperty('--card-padding', sidebarCollapsed ? '2rem' : '1.5rem');
       })();
     </script>
-    <link href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@400;500;700&display=swap" rel="stylesheet" />
+    <script src="/feature-flags.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@100;200;300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
     <link rel="stylesheet" href="/styles/user-info-update.css" />
     <link rel="stylesheet" href="/styles/breadcrumb-alignment.css" />
@@ -192,7 +193,7 @@
         color: var(--text-secondary);
         font-size: 14px;
         margin-bottom: 20px;
-        opacity: 0.8;
+        opacity: 0%.8;
       }
 
       .plan-limits {
@@ -218,7 +219,7 @@
       .limit-label {
         font-size: 12px;
         color: var(--text-secondary);
-        opacity: 0.7;
+        opacity: 0%.7;
       }
 
       .plan-features {
@@ -358,7 +359,7 @@
       }
 
       .feature-card.locked {
-        opacity: 0.6;
+        opacity: 0%.6;
         cursor: not-allowed;
       }
 
@@ -398,7 +399,7 @@
         font-size: 14px;
         color: var(--text-secondary);
         margin-bottom: 12px;
-        opacity: 0.8;
+        opacity: 0%.8;
       }
 
       .feature-plan-badge {
@@ -457,7 +458,7 @@
       }
 
       .feature-actions .btn:disabled {
-        opacity: 0.5;
+        opacity: 0%.5;
         cursor: not-allowed;
       }
 
@@ -467,7 +468,6 @@
         margin-bottom: 100px; /* Platz für Summary Bar */
         background: rgba(255, 255, 255, 0.02);
         backdrop-filter: blur(20px);
-        -webkit-backdrop-filter: blur(20px);
         border: 1px solid rgba(255, 255, 255, 0.1);
         border-radius: 12px;
         padding: 32px;
@@ -510,7 +510,7 @@
       .addon-unit {
         font-size: 12px;
         color: var(--text-secondary);
-        opacity: 0.7;
+        opacity: 0%.7;
       }
 
       .addon-current {
@@ -556,7 +556,6 @@
       /* Summary Bar - angepasst für Standard-Layout */
       .summary-bar {
         backdrop-filter: blur(20px);
-        -webkit-backdrop-filter: blur(20px);
         border-top: 1px solid hsla(0, 0%, 100%, 0.1);
         bottom: 0;
         box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.3);
@@ -597,7 +596,7 @@
       .summary-label {
         font-size: 11px;
         color: var(--text-secondary);
-        opacity: 0.7;
+        opacity: 0%.7;
       }
 
       .summary-value {
@@ -616,7 +615,7 @@
         background: var(--primary-color);
         border: none;
         border-radius: 6px;
-        color: white;
+        color: #fff;
         font-weight: 600;
         font-size: 14px;
         cursor: pointer;
@@ -694,8 +693,8 @@
                     <span>E-Mail Benachrichtigungen</span>
                   </div>
                   <div class="plan-feature">
-                    <i class="fas fa-times" style="color: var(--text-secondary); opacity: 0.5"></i>
-                    <span style="opacity: 0.5">Erweiterte Features</span>
+                    <i class="fas fa-times" style="color: var(--text-secondary); opacity: 0%.5"></i>
+                    <span style="opacity: 0%.5">Erweiterte Features</span>
                   </div>
                 </div>
 
@@ -915,6 +914,7 @@
 
     <!-- Scripts -->
     <script type="module" src="/scripts/components/unified-navigation.ts"></script>
+    <script type="module" src="/scripts/role-switch.ts"></script>
     <script>
       // Plan data will be loaded from API
       let plans = {
@@ -1020,8 +1020,8 @@
       };
 
       let currentPlan = null;
-      let currentTenant = null;
-      let activeFeatures = [];
+      const currentTenant = null;
+      const activeFeatures = [];
       let tenantAddons = {};
       let currentTenantId = null;
       const token = localStorage.getItem('token');
@@ -1081,7 +1081,7 @@
           }
 
           const plansData = await plansResponse.json();
-          console.log('Loaded plans response:', plansData);
+          console.info('Loaded plans response:', plansData);
 
           // Extract the data array from the response
           allPlans = plansData.data || plansData;
@@ -1122,7 +1122,7 @@
             tenantAddons = {};
           } else {
             const currentPlanData = await currentPlanResponse.json();
-            console.log('Current plan data:', currentPlanData);
+            console.info('Current plan data:', currentPlanData);
 
             if (currentPlanData.plan && currentPlanData.plan.plan_code) {
               currentPlan = currentPlanData.plan.plan_code;
@@ -1172,7 +1172,7 @@
             headers: { Authorization: `Bearer ${token}` },
           });
           const featuresData = await response.json();
-          console.log('Loaded tenant features response:', featuresData);
+          console.info('Loaded tenant features response:', featuresData);
 
           // Extract the data array from the response
           const features = featuresData.data || featuresData;
@@ -1251,7 +1251,7 @@
                   const isActive = feature.active;
 
                   return `
-                  <div class="feature-card ${isActive ? 'active' : ''} ${!canActivate ? 'locked' : ''}" 
+                  <div class="feature-card ${isActive ? 'active' : ''} ${!canActivate ? 'locked' : ''}"
                        data-feature="${feature.code}"
                        data-min-plan="${feature.minPlan}">
                     <span class="feature-status ${isActive ? 'status-active' : !canActivate ? 'status-locked' : 'status-inactive'}">

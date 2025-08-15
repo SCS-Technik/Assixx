@@ -1,425 +1,455 @@
-# Daily Progress Log - Assixx Development
+# 📊 Daily Progress Log - Frontend v2 Migration
 
-## 03.08.2025 - Samstag (🎉 API v2 MIGRATION ABGESCHLOSSEN! 🎉)
-
-### 🎯 Session 4 - Die letzten 3 APIs - FINALE!
-
-**Arbeitszeit:** 21:00 - 01:00 Uhr (4 Stunden)  
-**Produktivität:** ⭐⭐⭐⭐⭐ API v2 Migration zu 100% abgeschlossen!
-
-### 🚀 Admin-Permissions API v2 (30 Minuten)
-
-#### Features implementiert:
-
-- ✅ **8 Endpoints** für Department & Group Permissions
-- ✅ **Multi-Level Permissions** (canRead, canWrite, canDelete)
-- ✅ **Bulk Operations** für mehrere Admins gleichzeitig
-- ✅ **Access Check Endpoint** für Debugging
-- ✅ **Root-only Access** (außer /my Endpoint)
-- ✅ **Integration mit Department-Groups**
-
-### 🚀 Department-Groups API v2 (30 Minuten)
-
-#### Features implementiert:
-
-- ✅ **8 Endpoints** für hierarchische Gruppenverwaltung
-- ✅ **Parent-Child Beziehungen** für Gruppen-Hierarchie
-- ✅ **Many-to-Many Department** Zuordnungen
-- ✅ **Integration mit Admin-Permissions** (Löschung blockiert)
-- ✅ **Recursive Department Collection** durch Subgroups
-- ✅ **Circular Dependency Check**
-
-### 🚀 Roles API v2 (30 Minuten)
-
-#### Features implementiert:
-
-- ✅ **5 Endpoints** für Rollen-Management
-- ✅ **Statische Rollen** (root, admin, employee)
-- ✅ **Hierarchie mit Level-System** (100, 50, 10)
-- ✅ **Permission Arrays** pro Rolle definiert
-- ✅ **Check Endpoint** für Role-Based Access Control
-- ✅ **Assignable Roles** basierend auf Current User
-
-### 🚀 Signup API v2 (1 Stunde) - LETZTE API!
-
-#### Features implementiert:
-
-- ✅ **2 Endpoints** (Register, Check Subdomain)
-- ✅ **Public API** ohne Authentifizierung
-- ✅ **Wrapper um Tenant.create()** mit camelCase Konvertierung
-- ✅ **Subdomain Validierung** und Verfügbarkeits-Check
-- ✅ **14 Tage Trial Period** automatisch
-- ✅ **Rate Limiting** auf beiden Endpoints
-
-#### TypeScript Fixes:
-
-- ✅ AuthenticatedRequest statt AuthRequest
-- ✅ Request/Response Types für public routes
-- ✅ \_req für unbenutzte Parameter
-- ✅ Kein 'any' verwendet!
-
-### 📊 FINALE Metriken
-
-**API v2 Migration abgeschlossen:**
-
-- 🏆 **27/27 APIs fertig (100%)**
-- 🏆 **Phase 1: 13/13 APIs (100%)**
-- 🏆 **Phase 2: 14/14 APIs (100%)**
-- ✅ **576+ Tests alle grün**
-- ✅ **0 TypeScript Errors**
-- ✅ **0 ESLint Warnings**
-
-**Gesamt-Statistik der Migration:**
-
-- 📅 **6 Tage** (28.07. - 03.08.2025)
-- ⏱️ **~48 Stunden** produktive Arbeit
-- 📈 **4-5 APIs pro Tag** Durchschnitt
-- 💾 **~50.000 Zeilen** Code geschrieben
-- 🔧 **Kein einziges 'any'** in TypeScript!
-
-**Zeit-Effizienz:**
-
-- ⏱️ **4 Stunden** für die letzten 4 APIs
-- 📈 **1 API pro Stunde** für Simple APIs
-- 🎯 **25+ Stunden gespart** durch pragmatische Test-Strategie
-
-### 💡 Wichtigste Erkenntnisse der Migration
-
-1. **Konsistenz ist König** - camelCase, success flag, meta object überall
-2. **TypeScript ohne 'any'** ist möglich und wertvoll
-3. **Test-Driven Development** funktioniert hervorragend
-4. **Pragmatismus bei Tests** - Nicht jede API braucht 100% Coverage
-5. **Workshop-Entscheidungen** waren goldrichtig
-6. **Migration statt Big Bang** - v1 und v2 parallel ist der Weg
-
-### 🎉 Was wurde erreicht?
-
-- ✅ **100% konsistente API Standards**
-- ✅ **Vollständige OpenAPI/Swagger Dokumentation**
-- ✅ **Multi-Tenant Isolation überall**
-- ✅ **Type-Safe von Frontend bis Datenbank**
-- ✅ **Testbare und wartbare Codebasis**
-- ✅ **Zukunftssichere Architektur**
+**Start:** 03.08.2025
+**Projekt:** Assixx Frontend API v2 Migration
+**Ziel:** Migration aller 65 Frontend-Dateien von v1 auf v2 APIs
 
 ---
 
-## 02.08.2025 - Freitag (Session 3: Areas & Root & Admin-Permissions API v2!)
+## 📅 28.01.2025 (Dienstag) - Phase 8 Planning & Organization (Calendar KOMPLETT!)
 
-### 🎯 Session 3 - Areas, Root & Admin-Permissions API v2
+### 🎯 Tagesaufgabe
 
-**Arbeitszeit:** 20:00 - 23:00 Uhr (3 Stunden)  
-**Produktivität:** ⭐⭐⭐⭐⭐ Drei APIs komplett implementiert!
+- Phase 8 Planning & Organization: calendar.ts Migration
+- Badge-System für ungelesene Events implementieren
+- Statusanfrage-Feature (requires_response) entwickeln
+- Privacy-Bug fixen (Admins sehen private Events)
 
-### 🚀 Areas API v2 (45 Minuten)
+### ✅ Erfolge
 
-#### Features implementiert:
+**Calendar v2 Migration:**
 
-- ✅ **8 Endpoints** für Bereichs-/Zonenverwaltung
-- ✅ **CRUD Operations** mit Multi-Tenant Isolation
-- ✅ **Parent-Child Hierarchy** für verschachtelte Bereiche
-- ✅ **Area Types:** building, warehouse, office, production, outdoor, other
-- ✅ **Employee Count** Statistiken pro Bereich
-- ✅ **Soft Delete** mit is_active Flag
+- ✅ calendar.ts vollständig auf API v2 migriert
+- ✅ Alle Field-Mappings (camelCase/snake_case) implementiert
+- ✅ Badge-System für ungelesene Events mit Statusanfrage
+- ✅ Modal "Neue Termine mit Statusanfrage" entwickelt
+- ✅ Checkbox "Teilnehmer müssen Zusage/Absage geben" hinzugefügt
+- ✅ Automatische Farbzuweisung basierend auf Event-Ebene
+- ✅ Farb-Picker aus Modal entfernt (deprecated)
+- ✅ Privacy-Fix: Admins sehen keine privaten Events anderer mehr
+- ✅ Feature Flag USE_API_V2_CALENDAR = true (PRODUKTIV!)
+- ✅ 31/64 Frontend-Dateien migriert (48.4%)
 
-### 🚀 Root API v2 (1 Stunde)
+### 🔧 Technische Details
 
-#### Features implementiert:
+**Badge-System Implementation:**
 
-- ✅ **25 Endpoints** (umfangreichste API!)
-- ✅ **Admin Management** - CRUD für alle Tenant-Admins
-- ✅ **Root User Management** - CRUD mit Security Checks
-- ✅ **Tenant Overview** - Alle Mandanten mit Statistiken
-- ✅ **Dashboard Stats** - User Counts, Features, System Health
-- ✅ **Storage Info** - Plan-basierte Limits und Nutzung
-- ✅ **Tenant Deletion Process** - Mit 2-Root-User Genehmigung
-- ✅ **Admin Activity Logs** - Tracking aller Admin-Aktionen
+- Backend-Endpoint `/api/v2/calendar/unread-events` erstellt
+- Datenbank-Migration für `requires_response` Feld
+- Frontend Badge in `unified-navigation.ts` integriert
+- Auto-Update alle 30 Sekunden
+- Modal öffnet sich automatisch bei ungelesenen Events
 
-### 🚀 Admin-Permissions API v2 (30 Minuten)
+**Privacy-Fix Details:**
 
-#### Features implementiert:
+- Problem: Admins konnten alle privaten Events sehen
+- Lösung: Visibility-Rules gelten jetzt für ALLE User
+- Zeile 197 in `backend/src/models/calendar.ts` angepasst
+- Admins sehen nur noch Events, an denen sie beteiligt sind
 
-- ✅ **8 Endpoints** für Permissions Management
-- ✅ **Department Permissions** CRUD
-- ✅ **Group Permissions** CRUD
-- ✅ **Bulk Operations** für mehrere Admins
-- ✅ **Access Check** Endpoint
-- ✅ **Multi-Level Permissions** (read/write/delete)
+**Field-Mapping Fixes:**
 
-#### Technische Herausforderungen gelöst:
-
-1. 🐛 **TypeScript Union Type Error** - pool.execute nicht callable
-2. 🐛 **Lösung ohne 'any'** - execute aus utils/db.js verwendet
-3. 🐛 **ServiceError Constructor** - Richtige Parameter-Reihenfolge
-4. 🐛 **RootLog.log Parameter** - String statt Object übergeben
-5. 🐛 **path-to-regexp Error** - Optional Parameter Problem gelöst
+- v2 API: camelCase (firstName, lastName, startTime, endTime)
+- v1 API: snake_case (first_name, last_name, start_time, end_time)
+- Bidirektionales Mapping implementiert für Kompatibilität
 
 ### 📊 Metriken
+
+- Zeit: ~5 Stunden
+- Files: 3 migriert/geändert (calendar.ts, unified-navigation.ts, calendar.service.ts)
+- API Calls: 15+ migriert
+- Neue Features: 2 (Badge-System, Statusanfragen)
+- Bug Fixes: 2 (Privacy-Bug, Field-Mapping)
+- Fortschritt: 48.4% (31/64 Files)
+- Feature Flags aktiviert: USE_API_V2_CALENDAR
+- Nächste Tasks: shifts.ts, shifts.html
+
+---
+
+## 📅 08.08.2025 (Donnerstag) - Phase 7 Communication (Blackboard + Chat KOMPLETT!)
+
+### 🎯 Tagesaufgabe
+
+- Phase 7 Communication: blackboard.ts + chat.ts Migration
+- Backend v2 Routing für Blackboard fixen
+- Chat WebSocket Multi-Tenant-Isolation fixen
+- Unread Messages Feature implementieren
+
+### ✅ Erfolge
+
+**Blackboard:**
+
+- ✅ blackboard.ts vollständig auf API v2 migriert
+- ✅ Backend v2 Routes existieren bereits (waren nur nicht richtig gemountet)
+- ✅ Feature Flag USE_API_V2_BLACKBOARD aktiviert
+- ✅ Kritischer Bug behoben: API-Endpunkte korrigiert
+- ✅ blackboard-modal-update.html gelöscht (war redundant)
+
+**Chat (KOMPLETT FERTIG!):**
+
+- ✅ chat.ts vollständig auf API v2 migriert
+- ✅ WebSocket Multi-Tenant-Isolation gefixt (tenant_id → tenantId)
+- ✅ camelCase/snake_case Issues komplett behoben
+- ✅ Unread Messages Badge in Sidebar implementiert
+- ✅ Unread Conversation Highlighting mit Badge
+- ✅ Last Message Preview funktioniert
+- ✅ Message Ordering korrigiert (ASC statt DESC)
+- ✅ Feature Flag USE_API_V2_CHAT = true (PRODUKTIV!)
+- ✅ 30/64 Frontend-Dateien migriert (46.9%)
+
+### 🔧 Technische Details
+
+**Kritischer Bug Fix:**
+
+- Problem: Frontend rief `/api/v2/blackboard` auf, aber v2 API erwartet `/api/v2/blackboard/entries`
+- Lösung: Alle Endpunkte angepasst:
+
+  ```typescript
+  // Alt (falsch)
+  const endpoint = `/blackboard`;
+
+  // Neu (korrekt für v2)
+  const endpoint = useV2 ? "/blackboard/entries" : "/blackboard";
+  ```
+
+**Chat Migration Details:**
+
+- WebSocket Permission Fix: tenant_id → tenantId in JWT decode
+- Frontend camelCase Handling für dates (created_at/createdAt)
+- Frontend camelCase Handling für sender (sender_id/senderId)
+- Message Ordering: ORDER BY ASC statt DESC
+- Last Message Preview mit Subqueries implementiert
+- Unread Count in Backend chat.service.ts implementiert
+- Unread Badge mit Pulse-Animation in chat.html
+- Sidebar Badge Update via WebSocket Events
+
+**Blackboard Migration Details:**
+
+- 20+ API Calls von v1 zu v2 migriert
+- Confirm-Dialoge durch Custom Modal ersetzt
+- console.info durch console.info ersetzt (ESLint)
+- Async Arrow Functions durch Promise.resolve() ersetzt
+- TypeScript strict typing durchgesetzt (kein `any`)
+
+### 📊 Metriken
+
+- Zeit: ~6 Stunden (2h Blackboard, 4h Chat mit Debugging)
+- Files: 3 migriert (blackboard.ts, chat.ts, unified-navigation.ts), 1 gelöscht
+- API Calls: 30+ migriert (20 Blackboard, 10+ Chat)
+- Fortschritt: 46.9% (30/64 Files)
+- Feature Flags aktiviert: USE_API_V2_BLACKBOARD, USE_API_V2_CHAT
+- Nächste Tasks: notification.service.ts, calendar.ts, shifts.ts
+
+---
+
+## 📅 07.08.2025 (Mittwoch) - Phase 5, 6 & 7 Documents
+
+### 🎯 Tagesaufgabe
+
+- Phase 5 Abschluss (Dashboards)
+- Phase 6 komplett (User Profile & Settings)
+- Phase 7 Start (Documents & Files)
+
+### ✅ Erfolge
+
+- ✅ dashboard-scripts.ts erfolgreich auf API v2 migriert
+- ✅ Phase 5 (Dashboards) komplett abgeschlossen!
+- ✅ Phase 6 KOMPLETT ABGESCHLOSSEN (Profile & Settings)!
+- ✅ Phase 7 Documents & Files KOMPLETT ABGESCHLOSSEN & GETESTET!
+- ✅ 26/64 Frontend-Dateien migriert (40.6%)
+- ✅ BUG FIX: Modal Display Issue in allen documents-\*.html Seiten behoben
+- ✅ Feature Flag USE_API_V2_DOCUMENTS aktiviert
+
+### 🔧 Technische Details
+
+**Migration dashboard-scripts.ts:**
+
+- Import von `apiClient` hinzugefügt
+- Feature Flag `USE_API_V2_USERS` genutzt
+- API Call von `/api/user/profile` zu `/api/v2/users/profile` migriert
+- Async/await Pattern implementiert
+- TypeScript Build erfolgreich (0 Errors)
+
+**Änderungen:**
+
+```typescript
+// Alt (v1)
+fetch("/api/user/profile", { headers: { Authorization: `Bearer ${token}` } });
+
+// Neu (v2)
+const useV2Users = window.FEATURE_FLAGS?.USE_API_V2_USERS;
+if (useV2Users) {
+  userData = await apiClient.get<User>("/users/profile");
+}
+```
+
+### 🔧 Weitere Details
+
+**Phase 6 abgeschlossen:**
+
+- profile.html, admin-profile.ts, root-profile.html, account-settings.html
+- profile-picture.ts & profile-picture.html entfernt (unbenutzt)
+- CSS Fix für Header-Avatar Display
+
+**Phase 7 Documents abgeschlossen:**
+
+- 6 Files migriert mit insgesamt 13 API Calls
+- documents.ts, document-base.ts, upload-document.ts, document-upload.html, employee-documents.html
+- BUG FIX: Doppelte class Attribute in Modal-Elementen korrigiert
+
+### 📊 Metriken
+
+- Zeit: ~3 Stunden
+- Files: 12 migriert (dashboard-scripts + 5 Profile + 6 Documents)
+- Fortschritt: 40.6% (26/64 Files)
+- Feature Flags aktiviert: USE_API_V2_DOCUMENTS
+- Nächste Phase: Phase 7 Fortsetzung (Communication, Planning, KVP)
+
+---
+
+## 📅 03.08.2025 (Samstag) - Frontend v2 Migration Start
+
+### 🎯 Tagesaufgabe
+
+Start der Frontend Migration - Phase 1 & 2 (Signup & Auth)
+
+### ✅ Erfolge
+
+**Phase 1-2 erfolgreich abgeschlossen:**
+
+- ✅ Signup v2 vollständig funktionsfähig
+- ✅ Auth v2 (Login/Logout/Validate) implementiert
+- ✅ Feature Flag System aktiviert
+- ✅ Response Adapter für v1/v2 Kompatibilität
+
+**Kritische Bugs behoben:**
+
+1. **Employee Number UNIQUE Constraint**
+   - Problem: Hart codierte '000001' für alle neuen Root-User
+   - Lösung: Generierte eindeutige Nummern mit TEMP- Prefix
+
+2. **JSON Parsing Error mit curl**
+   - Problem: Windows/WSL Escaping-Probleme
+   - Lösung: JSON-Datei statt inline JSON
+
+3. **Personalnummer-Modal nicht angezeigt**
+   - Problem: Frontend suchte nur nach '000001'
+   - Lösung: Check für TEMP- Prefix hinzugefügt
+
+### 🔧 Technische Details
+
+**Implementierte Komponenten:**
+
+- `/frontend/src/utils/api-client.ts` - Zentrale API v1/v2 Kommunikation
+- `/frontend/public/feature-flags.js` - Granulare API-Kontrolle
+- `/frontend/src/utils/response-adapter.ts` - Format-Konvertierung
+- `/docs/api/v2-curl-examples.md` - Dokumentation für API-Tests
 
 **Code-Änderungen:**
 
-- 📝 **18 Dateien** erstellt (3 APIs komplett)
-- ➕ **~3.300 Zeilen** Code (Service + Controller + Types)
-- 🆗 **41 Endpoints** insgesamt (8 + 25 + 8)
-- 🔧 **0 TypeScript any** verwendet!
-
-**API v2 Status Update:**
-
-- ✅ **24/27 APIs fertig (89%)**
-- ✅ **Nur noch 3 APIs verbleibend**
-
----
-
-## 02.08.2025 - Freitag (Audit Trail API v2 + Features API v2 mit Tests!)
-
-### 🎯 Session 2 - Audit Trail API v2
-
-**Arbeitszeit:** 17:30 - 20:10 Uhr (2,5 Stunden)  
-**Produktivität:** ⭐⭐⭐⭐⭐ Audit Trail API mit 30 Tests alle grün!
-
-### 🚀 Audit Trail API v2 (2,5 Stunden)
-
-#### Features implementiert:
-
-- ✅ **6 Endpoints** für Compliance und Audit Logging
-- ✅ **GDPR Compliance Reports** Generation
-- ✅ **Data Retention Policies** mit Root-only Löschung
-- ✅ **CSV/JSON Export** für Audit-Daten
-- ✅ **Statistik-Aggregation** nach Actions/Resources
-- ✅ **User-basierte Filterung** (non-root sehen nur eigene)
-
-#### Test-Suite entwickelt:
-
-- ✅ **30 Tests** geschrieben und alle grün
-- ✅ **Multi-Tenant Isolation** verifiziert
-- ✅ **Role-based Access Control** Tests
-- ✅ **Export-Funktionalität** getestet
-- ✅ **Retention Policy** Tests
-
-#### Technische Herausforderungen gelöst:
-
-1. 🐛 **MySQL LIMIT/OFFSET Error** - execute() zu query() gewechselt
-2. 🐛 **User Filtering Bug** - Non-root sahen alle Einträge
-3. 🐛 **CSV Export Error** - this.generateCSV nicht verfügbar
-4. 🐛 **Middleware vs Controller** - Error Message Mismatch
-
-#### Wichtige Erkenntnisse:
-
-- 💡 MySQL prepared statements haben Probleme mit LIMIT/OFFSET als Parameter
-- 💡 query() statt execute() für dynamische LIMIT/OFFSET verwenden
-- 💡 Service Methoden müssen static sein für CSV Generation
-- 💡 Export-Funktionalität ist kritisch für GDPR Compliance
+```typescript
+// Tenant Model - Eindeutige Personalnummern
+const timestamp = Date.now().toString().slice(-6);
+const random = Math.floor(Math.random() * 1000)
+  .toString()
+  .padStart(3, "0");
+const employeeNumber = `TEMP-${timestamp}${random}`;
+```
 
 ### 📊 Metriken
 
-**Code-Änderungen:**
+- 📝 **15 TODOs** abgearbeitet
+- ✅ **5 Frontend-Dateien** migriert (7.7% von 65)
+- 🐛 **3 kritische Bugs** behoben
+- ⏱️ **~6 Stunden** intensives Debugging
+- 🚀 **2 APIs** live in Production (Signup & Auth)
 
-- 📝 **7 Dateien** erstellt (API komplett neu)
-- ➕ **~1.800 Zeilen** Code (inkl. Tests)
-- ✅ **30 Tests** geschrieben
-- 🎯 **100% Test Coverage** für Audit Trail API
+### 🎉 Meilenstein
 
-**API v2 Status Update:**
+**SIGNUP & AUTH v2 SIND JETZT PRODUKTIV!**
 
-- ✅ **22/27 APIs fertig (81%)**
-- ✅ **576+ Tests insgesamt** (30 neue für Audit Trail)
-- ✅ **Phase 2 fast abgeschlossen**
+Feature Flags dauerhaft aktiviert:
+
+```javascript
+USE_API_V2_SIGNUP: true,  // ✅ LIVE
+USE_API_V2_AUTH: true,    // ✅ LIVE
+```
+
+### 📚 Dokumentation
+
+- `/docs/api/v2-curl-examples.md` - Vollständige curl-Beispiele für v2 APIs
+- `/docs/fixed-bugs/v2-signup-500-error.md` - Debugging und Lösung dokumentiert
+- `/docs/api/API-V2- MIGRATION-INPROD/FRONTEND-MIGRATION-CHECKLIST-ORDERED.md` - Aktualisiert
+
+### 🔮 Nächste Schritte
+
+- Phase 4: Post-Login UI Components
+  - header-user-info.ts
+  - unified-navigation.ts
+  - role-switch.ts
+- Phase 5: Dashboard Migration
+- Weitere 60 Frontend-Dateien zu migrieren
+
+### 💡 Lessons Learned
+
+- UNIQUE constraints über alle Tenants hinweg können problematisch sein
+- Windows/WSL curl hat spezielle Escaping-Anforderungen
+- Temporäre Marker (wie TEMP-) sind besser als hart codierte Werte
 
 ---
 
-## 02.08.2025 - Freitag (Features API v2 mit vollständigen Tests!)
+## 📅 04.08.2025 (Sonntag) - Phase 4 & 5 Migration
 
-### 🎯 Session 1 - Features API v2
+### 🎯 Tagesaufgabe
 
-**Arbeitszeit:** 14:00 - 17:00 Uhr (3 Stunden)  
-**Produktivität:** ⭐⭐⭐⭐⭐ Features API mit 32 Tests komplett!
+Completion of Phase 4 (Post-Login UI) und Start of Phase 5 (Dashboards)
 
-### 🚀 Features API v2 Implementation
+### ✅ Erfolge
 
-#### Umfang der Arbeit:
+**Phase 4 erfolgreich abgeschlossen:**
 
-- ✅ **11 Endpoints** implementiert (Public + Auth + Admin + Root)
-- ✅ **Service Layer** mit allen Business Logic Methoden
-- ✅ **Controller** mit vollständiger Error Handling
-- ✅ **Validation Rules** für alle Endpoints
-- ✅ **Swagger/OpenAPI** Documentation komplett
-- ✅ **32 Tests** geschrieben und alle grün!
+- ✅ departments.html - v2 API migration mit Feature Flag Aktivierung
+- ✅ Employee creation - Departments dropdown jetzt über v2 API
+- ✅ role-switch.ts - Admin role switch nutzt jetzt v2 API
+- ✅ unified-navigation.ts - Teilweise migriert (role-switch part)
 
-#### Technische Herausforderungen gelöst:
+**Phase 5 Dashboard Migration gestartet:**
 
-1. 🐛 **Database Schema Mismatch** - base_price statt price
-2. 🐛 **Route-Reihenfolge Bug** - /:code musste nach /all-tenants
-3. 🐛 **fieldMapper Utility** erstellt für snake_case/camelCase
-4. 🐛 **Lodash Import Problem** - zu import \_ geändert
-5. 🐛 **Express-Validator Methoden** - exists() zu notEmpty()
+- ✅ employee-dashboard.html - Vollständig funktionsfähig (außer survey API)
+- ✅ header-user-info.ts - Bereits v2-ready durch apiClient
+- ✅ employee-dashboard.ts - Vollständig zu apiClient migriert
 
-#### Test Coverage:
+### 🐛 Kritische Bugs behoben
 
-- ✅ Public Endpoints (List Features, By Category)
-- ✅ Authenticated Endpoints (My Features, Check Access)
-- ✅ Admin Endpoints (Activate/Deactivate)
-- ✅ Root Endpoints (All Tenants Overview)
-- ✅ Error Handling & Validation
-- ✅ Multi-Tenant Isolation
+1. **Role-switch 401 Error**
+   - Problem: Alter v1 endpoint wurde verwendet
+   - Lösung: Migration zu v2 API format
 
-#### Security Issue gefunden:
+2. **Departments nicht sichtbar in Employee Creation Modal**
+   - Problem: v1 API response format erwartet
+   - Lösung: v2 API integration mit korrektem data handling
 
-- ⚠️ **TODO:** Admin kann Features für andere Tenants aktivieren
-- Controller-Level Check fehlt noch
-- Service hat bereits Tenant-Isolation
+3. **Employee-dashboard Error nach employee-id Element Entfernung**
+   - Problem: Script suchte nach entferntem DOM Element
+   - Lösung: Code cleanup und bessere error handling
 
 ### 📊 Metriken
 
-**Code-Änderungen:**
+- 📝 **8 Frontend-Dateien** erfolgreich migriert heute
+- ✅ **11/64 Dateien** migriert (16.9% - Fortschritt von 7.7%)
+- 🐛 **3 kritische Bugs** behoben
+- ⏱️ **~4 Stunden** produktive Entwicklungszeit
+- 🚀 **Phase 4 komplett abgeschlossen**
 
-- 📝 **8 Dateien** erstellt/modifiziert
-- ➕ **~2.500 Zeilen** Code (inkl. Tests)
-- ✅ **32 Tests** geschrieben
-- 🎯 **100% Test Coverage** für Features API
+### 🔮 Nächste Schritte
 
-**Zeit-Analyse:**
+- admin-dashboard.ts Migration fortsetzen
+- Phase 5 Dashboards vervollständigen
+- Survey API integration für employee-dashboard
 
-- ⏱️ **1 Stunde** für Implementation
-- ⏱️ **2 Stunden** für Tests und Debugging
-- 📈 **32 Tests in 2 Stunden** = sehr produktiv!
+### 💡 Lessons Learned
 
----
-
-## 31.07.2025 - Donnerstag (PHASE 1 ABGESCHLOSSEN! 🎉)
-
-### 🎯 Marathon Session - 4 APIs fertiggestellt!
-
-**Arbeitszeit:** 15:00 - 23:30 Uhr (8,5 Stunden mit Pausen)  
-**Produktivität:** ⭐⭐⭐⭐⭐ Absoluter Rekordtag!
-
-### 🚀 Was wurde erreicht?
-
-1. **Notifications API v2** ✅ (15:00 - 16:00)
-   - 13 Endpoints (CRUD + Bulk + Preferences + Templates)
-   - 27 Tests - alle grün
-   - Multi-Channel Support (push, email, in-app)
-
-2. **Settings API v2** ✅ (16:00 - 17:30)
-   - 18 Endpoints (System/Tenant/User + Categories + Bulk)
-   - 12 Tests - alle grün (nach Debug-Session)
-   - 3-Ebenen-System mit Type-safe storage
-
-3. **AdminLog → RootLog Migration** ✅ (18:00 - 20:50)
-   - Komplett neues Model erstellt
-   - 27 Dateien systematisch migriert
-   - Logs API v2 implementiert
-   - Saubere Trennung von Admin/Root Logs
-
-4. **Plans API v2** ✅ (21:00 - 23:30)
-   - 8 Endpoints (CRUD + Upgrade + Addons + Costs)
-   - 15 Tests - alle grün
-   - Vollständiges Subscription Management
-
-### 📊 Tages-Metriken
-
-**Code-Produktivität:**
-
-- 📝 **31 Dateien** erstellt/modifiziert
-- ➕ **~5.000 Zeilen** produktiver Code
-- ✅ **54 neue Tests** geschrieben
-- 🎯 **4 komplette APIs** an einem Tag!
-
-**Debugging-Highlights:**
-
-- 🐛 Jest Module Resolution für Plans API
-- 🐛 Validation Middleware Hanging Bug
-- 🐛 Foreign Key Constraints in Tests
-- 🐛 AdminLog System-Settings Permission
-
-**Status Update:**
-
-- ✅ **PHASE 1 zu 100% abgeschlossen!**
-- ✅ **17/27 APIs fertig (63%)**
-- ✅ **500+ Tests alle grün**
+- apiClient pattern funktioniert hervorragend für Migration
+- Feature Flags ermöglichen schrittweise Migration
+- DOM Element dependencies sollten defensive checked werden
 
 ---
 
-## 30.07.2025 - Mittwoch
+## 📊 Wochenübersicht (ab 03.08.2025)
 
-### 🎯 Chat API v2 - Komplette Neuimplementierung
+### Migration Status
 
-**Arbeitszeit:** 20:00 - 23:00 Uhr (3 Stunden)  
-**Produktivität:** ⭐⭐⭐⭐⭐
+- **Abgeschlossen:** 11/64 Dateien (16.9%)
+- **In Arbeit:** Phase 5 (Dashboards)
+- **APIs Live:** 2 (Signup, Auth)
 
-### 🚀 Problem & Lösung
+### Fortschritts-Tracking
 
-**Problem identifiziert:**
+| Phase                    | Status         | Dateien | Fortschritt |
+| ------------------------ | -------------- | ------- | ----------- |
+| Phase 1 (Signup)         | ✅ Live        | 1/1     | 100%        |
+| Phase 2 (Auth)           | ✅ Live        | 2/2     | 100%        |
+| Phase 3 (Infrastructure) | ✅ Done        | 2/2     | 100%        |
+| Phase 4 (Post-Login UI)  | ✅ Done        | 3/3     | 100%        |
+| Phase 5 (Dashboards)     | 🔄 In Progress | 3/8     | 37.5%       |
+| Phase 6-10               | ⏳ Pending     | 0/48    | 0%          |
 
-- v1 Chat Service hatte eigenen DB Connection Pool
-- Inkompatibel mit v2 Architecture
-- Circular Dependencies überall
+---
 
-**Entscheidung:** Komplette v2 Implementation von Grund auf
+## 📅 05.08.2025 (Montag) - Admin Dashboard Migration
 
-### Was wurde implementiert?
+### 🎯 Tagesaufgabe
 
-1. **Service Layer** (9 Methoden)
-   - getChatUsers mit Role-based filtering
-   - getConversations mit Pagination
-   - createConversation (1:1 und Group)
-   - sendMessage mit Attachments
-   - markAsRead/markAllAsRead
-   - deleteMessage mit Soft-Delete
+Migration von admin-dashboard.ts auf API v2
 
-2. **Controller** (12 Endpoints)
-   - Vollständige CRUD Operations
-   - Typing Indicators
-   - Online Status
-   - Message Search
+### ✅ Erfolge
 
-3. **Test Suite** (24 Tests)
-   - 100% Pass Rate
-   - Multi-Tenant Isolation Tests
-   - Role-based Access Tests
-   - Message Flow Tests
+**admin-dashboard.ts vollständig migriert:**
+
+- ✅ loadDashboardStats - v2 Support für Admin Stats
+- ✅ loadDashboardStatsIndividually - Alle APIs (users, documents, departments, teams)
+- ✅ loadBlackboardPreview - v2 Blackboard API mit Feldnamen-Mapping
+- ✅ loadBlackboardWidget - v2 Support mit Attachment-Pfaden
+- ✅ loadRecentEmployees - v2 Users API
+- ✅ loadRecentDocuments - v2 Documents API mit Feldnamen-Mapping
+- ✅ loadTeams - v2 Teams API
+- ✅ createEmployee - v2 Users API mit snake_case zu camelCase Konvertierung
+- ✅ createDepartment - v2 Departments API
+- ✅ createTeam - v2 Teams API mit camelCase Konvertierung
+
+**Technische Verbesserungen:**
+
+- TypeScript Fehler behoben (response typing für apiClient)
+- Feldnamen-Mapping für v1/v2 Kompatibilität implementiert
+- Feature Flag Checks für alle API-Aufrufe hinzugefügt
+- Konsistente Error Handling für v1 und v2 APIs
+
+### 🔧 Technische Details
+
+**Implementierte Patterns:**
+
+```typescript
+// Feature Flag Check
+const useV2Users = window.FEATURE_FLAGS?.USE_API_V2_USERS;
+
+// v2 API Aufruf mit korrektem Typing
+employees = (await apiClient.get<User[]>("/users?role=employee")) ?? [];
+
+// Feldnamen-Mapping für Kompatibilität
+const fileName = doc.file_name ?? doc.fileName ?? "Unknown";
+const createdAt = doc.created_at ?? doc.createdAt ?? "";
+```
 
 ### 📊 Metriken
 
-- 📝 **8 Dateien** komplett neu geschrieben
-- ✅ **24 Tests** alle grün
-- ⏱️ **3 Stunden** von Problem zu Lösung
-- 🎯 **0 Dependencies** zu v1 Code
+- 📝 **22 TODOs** abgearbeitet für admin-dashboard.ts
+- ✅ **12 Frontend-Dateien** migriert (18.5% von 65)
+- 🐛 **10 TypeScript Fehler** behoben
+- ⏱️ **~2 Stunden** für komplette Migration
+- 🚀 **10 API-Endpoints** in admin-dashboard.ts migriert
 
-**Learning:** Manchmal ist Neuschreiben schneller als Refactoring!
+### 🎉 Meilenstein
+
+**ADMIN-DASHBOARD.TS VOLLSTÄNDIG AUF API v2 MIGRIERT UND GETESTET!**
+
+**Zusätzliche Fixes:**
+
+- ✅ Blackboard Query Parameter angepasst (sortDir statt sortOrder, created_at statt createdAt)
+- ✅ Dashboard Stats nutzt jetzt loadDashboardStatsIndividually() wenn v2 APIs aktiv
+- ✅ Departments slice Error behoben - v2 Response Format korrekt behandelt
+- ✅ Alle v1 API Calls entfernt
+
+### 📚 Status Update
+
+| Phase                    | Status         | Fortschritt | %    |
+| ------------------------ | -------------- | ----------- | ---- |
+| Phase 1 (Signup)         | ✅ Live        | 1/1         | 100% |
+| Phase 2 (Auth)           | ✅ Live        | 2/2         | 100% |
+| Phase 3 (Infrastructure) | ✅ Done        | 2/2         | 100% |
+| Phase 4 (Post-Login UI)  | ✅ Done        | 3/3         | 100% |
+| Phase 5 (Dashboards)     | 🔄 In Progress | 4/8         | 50%  |
+| Phase 6-10               | ⏳ Pending     | 0/47        | 0%   |
 
 ---
 
-## Zusammenfassung der Woche
-
-### 📊 Wochen-Statistik (28.07. - 03.08.2025)
-
-**Gesamt-Leistung:**
-
-- 🏆 **27 APIs** vollständig implementiert
-- ✅ **576+ Tests** geschrieben
-- 📅 **6 Arbeitstage**
-- ⏱️ **~48 Stunden** produktive Arbeit
-- 📈 **~50.000 Zeilen** Code
-
-**Durchschnittswerte:**
-
-- 📊 **4-5 APIs pro Tag**
-- ⏱️ **1-2 Stunden pro API**
-- ✅ **~100 Tests pro Tag**
-
-**Technische Highlights:**
-
-- 🔧 **0 TypeScript 'any'** verwendet
-- ✅ **100% ESLint konform**
-- 🎯 **Konsistente Standards** überall
-- 📚 **Vollständige Dokumentation**
-
-### 🎉 Mission Accomplished!
-
-Die API v2 Migration ist erfolgreich abgeschlossen. Alle 27 geplanten APIs wurden implementiert, getestet und dokumentiert. Das Projekt ist bereit für die nächste Phase!
-
-**Next Steps:**
-
-- Frontend Migration auf v2 APIs
-- v1 Deprecation Timeline
-- Performance Monitoring
-- Beta-Test Vorbereitung
+_Hinweis: Die vorherige DAILY-PROGRESS.md wurde archiviert unter `/docs/archive/daily-progress/DAILY-PROGRESS-2025-07-28-to-2025-08-03.md`_

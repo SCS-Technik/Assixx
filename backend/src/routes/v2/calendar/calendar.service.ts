@@ -6,6 +6,7 @@
 import CalendarModel from "../../../models/calendar.js";
 import type {
   CalendarEvent,
+  DbCalendarEvent,
   EventCreateData,
   EventUpdateData,
   EventAttendee,
@@ -33,11 +34,13 @@ export interface CalendarEventData {
   endTime: string;
   allDay?: boolean;
   orgLevel: "company" | "department" | "team" | "personal";
-  orgId?: number;
+  departmentId?: number; // Explizit für department/team Events
+  teamId?: number; // Explizit für team Events
   reminderMinutes?: number;
   color?: string;
   recurrenceRule?: string;
   attendeeIds?: number[];
+  requiresResponse?: boolean;
 }
 
 export interface CalendarEventUpdateData {
@@ -48,7 +51,8 @@ export interface CalendarEventUpdateData {
   endTime?: string;
   allDay?: boolean;
   orgLevel?: "company" | "department" | "team" | "personal";
-  orgId?: number;
+  departmentId?: number;
+  teamId?: number;
   reminderMinutes?: number | null;
   color?: string;
   recurrenceRule?: string | null;
@@ -57,17 +61,19 @@ export interface CalendarEventUpdateData {
 
 export class CalendarService {
   /**
-   * Get paginated list of calendar events
+   * Get paginated list of calendar events with filter optimization
    */
   async listEvents(
     tenantId: number,
     userId: number,
-    _userDepartmentId: number | null,
+    userDepartmentId: number | null,
+    userTeamId: number | null,
     filters: CalendarFilters,
   ) {
     const page = Math.max(1, parseInt(filters.page ?? "1", 10));
+    // Performance-Limit: max 200 Events
     const limit = Math.min(
-      100,
+      200,
       Math.max(1, parseInt(filters.limit ?? "50", 10)),
     );
     // offset is calculated in the model
@@ -94,14 +100,19 @@ export class CalendarService {
       limit,
       sortBy,
       sortDir,
+      userDepartmentId,
+      userTeamId,
     };
 
     try {
-      const result = await CalendarModel.getAllEvents(
+      const result = (await CalendarModel.getAllEvents(
         tenantId,
         userId,
         queryOptions,
-      );
+      )) as unknown as {
+        events: CalendarEvent[];
+        pagination: { total: number };
+      };
 
       // Map events to API format
       const events = result.events.map((event: CalendarEvent) =>
@@ -165,7 +176,7 @@ export class CalendarService {
           profilePicture: attendee.profile_picture,
         })),
       };
-    } catch (error) {
+    } catch (error: unknown) {
       if (error instanceof ServiceError) {
         throw error;
       }
@@ -174,12 +185,15 @@ export class CalendarService {
   }
 
   /**
-   * Create new calendar event
+   * Create new calendar event with permission checks
    */
   async createEvent(
     eventData: CalendarEventData,
     tenantId: number,
     userId: number,
+    userRole: string,
+    userDepartmentId?: number | null,
+    userTeamId?: number | null,
   ) {
     // Validate required fields
     if (!eventData.title) {
@@ -228,23 +242,83 @@ export class CalendarService {
       );
     }
 
-    // Validate org_level and org_id
-    if (
-      eventData.orgLevel !== "personal" &&
-      eventData.orgLevel !== "company" &&
-      !eventData.orgId
-    ) {
-      throw new ServiceError(
-        "BAD_REQUEST",
-        `org_id is required for ${eventData.orgLevel} events`,
-        400,
-        [
-          {
-            field: "orgId",
-            message: `Required for ${eventData.orgLevel} events`,
-          },
-        ],
-      );
+    // PERMISSION CHECKS basierend auf org_level
+    switch (eventData.orgLevel) {
+      case "company":
+        if (userRole !== "admin") {
+          throw new ServiceError(
+            "FORBIDDEN",
+            "Only admins can create company events",
+            403,
+          );
+        }
+        break;
+
+      case "department":
+        if (!eventData.departmentId) {
+          throw new ServiceError(
+            "BAD_REQUEST",
+            "departmentId is required for department events",
+            400,
+            [
+              {
+                field: "departmentId",
+                message: "Required for department events",
+              },
+            ],
+          );
+        }
+        if (userRole !== "admin" && userRole !== "lead") {
+          throw new ServiceError(
+            "FORBIDDEN",
+            "Only admins and leads can create department events",
+            403,
+          );
+        }
+        if (
+          userDepartmentId !== eventData.departmentId &&
+          userRole !== "admin"
+        ) {
+          throw new ServiceError(
+            "FORBIDDEN",
+            "Cannot create events for other departments",
+            403,
+          );
+        }
+        break;
+
+      case "team":
+        if (!eventData.teamId || !eventData.departmentId) {
+          throw new ServiceError(
+            "BAD_REQUEST",
+            "Both teamId and departmentId are required for team events",
+            400,
+            [
+              { field: "teamId", message: "Required for team events" },
+              { field: "departmentId", message: "Required for team events" },
+            ],
+          );
+        }
+        if (userTeamId !== eventData.teamId && userRole !== "admin") {
+          throw new ServiceError(
+            "FORBIDDEN",
+            "Cannot create events for other teams",
+            403,
+          );
+        }
+        break;
+
+      case "personal":
+        // Jeder kann persönliche Events erstellen
+        break;
+
+      default:
+        throw new ServiceError(
+          "BAD_REQUEST",
+          "Invalid organization level",
+          400,
+          [{ field: "orgLevel", message: "Invalid organization level" }],
+        );
     }
 
     const createData: EventCreateData = {
@@ -256,11 +330,18 @@ export class CalendarService {
       end_time: eventData.endTime,
       all_day: eventData.allDay ?? false,
       org_level: eventData.orgLevel,
-      org_id: eventData.orgId,
+      department_id: eventData.departmentId ?? null,
+      team_id: eventData.teamId ?? null,
       created_by: userId,
+      created_by_role: userRole,
+      allow_attendees:
+        eventData.attendeeIds && eventData.attendeeIds.length > 0
+          ? true
+          : false,
       reminder_time: eventData.reminderMinutes,
       color: eventData.color,
       recurrence_rule: eventData.recurrenceRule,
+      requires_response: eventData.requiresResponse ?? false,
     };
 
     try {
@@ -270,13 +351,14 @@ export class CalendarService {
         throw new ServiceError("SERVER_ERROR", "Failed to create event", 500);
       }
 
-      // Add attendees if provided
+      // Add attendees if provided (für alle Event-Typen möglich)
       if (eventData.attendeeIds && eventData.attendeeIds.length > 0) {
         for (const attendeeId of eventData.attendeeIds) {
           await CalendarModel.addEventAttendee(
             createdEvent.id,
             attendeeId,
             "pending",
+            tenantId, // Pass tenant_id for multi-tenant isolation
           );
         }
       }
@@ -288,7 +370,7 @@ export class CalendarService {
         userId,
       );
       return eventWithAttendees;
-    } catch (error) {
+    } catch (error: unknown) {
       if (error instanceof ServiceError) {
         throw error;
       }
@@ -359,7 +441,8 @@ export class CalendarService {
       end_time: updateData.endTime,
       all_day: updateData.allDay,
       org_level: updateData.orgLevel,
-      org_id: updateData.orgId,
+      department_id: updateData.departmentId,
+      team_id: updateData.teamId,
       reminder_time: updateData.reminderMinutes,
       color: updateData.color,
       recurrence_rule: updateData.recurrenceRule,
@@ -379,7 +462,7 @@ export class CalendarService {
       // Return updated event
       const updatedEvent = await this.getEventById(eventId, tenantId, userId);
       return updatedEvent;
-    } catch (error) {
+    } catch (error: unknown) {
       if (error instanceof ServiceError) {
         throw error;
       }
@@ -431,7 +514,7 @@ export class CalendarService {
         throw new ServiceError("SERVER_ERROR", "Failed to delete event", 500);
       }
       return true;
-    } catch (error) {
+    } catch (error: unknown) {
       // Re-throw ServiceErrors to preserve their status codes
       if (error instanceof ServiceError) {
         throw error;
@@ -466,7 +549,7 @@ export class CalendarService {
       }
 
       return { success: true };
-    } catch (error) {
+    } catch (error: unknown) {
       if (error instanceof ServiceError) {
         throw error;
       }
@@ -488,11 +571,13 @@ export class CalendarService {
     format: "ics" | "csv",
   ) {
     try {
-      const result = await CalendarModel.getAllEvents(
+      const result = (await CalendarModel.getAllEvents(
         tenantId,
         userId,
         { limit: 1000 }, // Export up to 1000 events
-      );
+      )) as unknown as {
+        events: DbCalendarEvent[];
+      };
 
       if (format === "csv") {
         return this.generateCSV(result.events);
@@ -536,6 +621,62 @@ export class CalendarService {
   }
 
   /**
+   * Get unread events (events requiring response)
+   */
+  async getUnreadEvents(tenantId: number, userId: number) {
+    try {
+      // Get all events where user is an attendee with pending response
+      const query = `
+        SELECT 
+          e.id,
+          e.title,
+          e.start_date as startTime,
+          e.requires_response,
+          a.response_status
+        FROM calendar_events e
+        JOIN calendar_attendees a ON e.id = a.event_id
+        WHERE 
+          e.tenant_id = ? 
+          AND a.user_id = ?
+          AND a.response_status = 'pending'
+          AND e.requires_response = 1
+          AND e.status = 'confirmed'
+          AND e.start_date >= NOW()
+        ORDER BY e.start_date ASC
+        LIMIT 50
+      `;
+
+      // Import the query function
+      const { query: executeQuery } = await import("../../../utils/db.js");
+      const [result] = await executeQuery(query, [tenantId, userId]);
+
+      // Type guard to ensure result is an array
+      const events: CalendarEvent[] = Array.isArray(result)
+        ? (result as CalendarEvent[])
+        : [];
+
+      // Count total unread events
+      const totalUnread = events.length;
+
+      return {
+        totalUnread,
+        eventsRequiringResponse: events.map((event) => ({
+          id: event.id as number,
+          title: event.title as string,
+          startTime: event.startTime as string,
+          requiresResponse: true,
+        })),
+      };
+    } catch (error: unknown) {
+      console.error("Error getting unread events:", error);
+      return {
+        totalUnread: 0,
+        eventsRequiringResponse: [],
+      };
+    }
+  }
+
+  /**
    * Generate ICS export
    */
   private generateICS(events: CalendarEvent[]): string {
@@ -562,7 +703,7 @@ DTEND:${dtend}Z
 SUMMARY:${event.title}
 DESCRIPTION:${event.description ?? ""}
 LOCATION:${event.location ?? ""}
-STATUS:${(event.status ?? "CONFIRMED").toUpperCase()}
+STATUS:${String((event.status ?? "CONFIRMED").toUpperCase())}
 END:VEVENT`;
       })
       .join("\n");

@@ -20,6 +20,7 @@
         document.documentElement.style.setProperty('--card-padding', sidebarCollapsed ? '2rem' : '1.5rem');
       })();
     </script>
+    <script src="/feature-flags.js"></script>
     <link rel="stylesheet" href="/styles/lib/fontawesome.min.css" />
     <style>
       @import url('/styles/dashboard-theme.css');
@@ -44,11 +45,6 @@
         background: linear-gradient(5deg, transparent, rgba(0, 142, 255, 0.1) 100%, #01000482 0, rgba(0, 0, 4, 0.6) 100%, #000);
         pointer-events: none;
         z-index: -1;
-      }
-
-      /* Glassmorphismus für Header */
-      .header {
-        /* Header styles sind bereits in dashboard-theme.css definiert */
       }
 
       /* Main content area - wie calendar? */
@@ -131,15 +127,13 @@
         display: flex;
         align-items: center;
         justify-content: space-between;
-        padding: var(--spacing-md);
+        padding: var(--spacing-2sm);
         background: rgba(255, 255, 255, 0.03);
         backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
         border: 1px solid hsla(0, 0%, 100%, 0.1);
         border-radius: var(--radius-sm);
         color: #fff;
         cursor: pointer;
-        min-height: 46px;
       }
 
       .dropdown-display:hover {
@@ -150,9 +144,6 @@
       .dropdown-display.active {
         border-color: rgba(0, 142, 255, 0.5);
         box-shadow: 0 0 0 3px rgba(0, 142, 255, 0.15);
-      }
-
-      .dropdown-display svg {
       }
 
       .dropdown-display.active svg {
@@ -166,20 +157,19 @@
         right: 0;
         background: rgba(18, 18, 18, 0.98);
         backdrop-filter: var(--glass-backdrop);
-        -webkit-backdrop-filter: var(--glass-backdrop);
         border: 1px solid hsla(0, 0%, 100%, 0.1);
         border-radius: var(--radius-sm);
         box-shadow: var(--shadow-sm);
         max-height: 200px;
         overflow-y: auto;
-        opacity: 0;
+        opacity: 0%;
         visibility: hidden;
         transform: translateY(-10px);
         z-index: 9999;
       }
 
       .dropdown-options.active {
-        opacity: 1;
+        opacity: 100%;
         visibility: visible;
         transform: translateY(0);
       }
@@ -253,7 +243,7 @@
         background: rgba(255, 255, 255, 0.03);
         backdrop-filter: blur(10px);
         color: var(--text-primary);
-        padding: var(--spacing-md);
+        padding: var(--spacing-2sm);
         display: grid;
         grid-template-columns: 120px repeat(6, 1fr);
         gap: 2px;
@@ -281,7 +271,7 @@
       .shift-label {
         background: rgba(255, 255, 255, 0.03);
         color: var(--text-primary);
-        padding: var(--spacing-md);
+        padding: var(--spacing-2sm);
         display: flex;
         flex-direction: column;
         align-items: center;
@@ -300,7 +290,7 @@
         backdrop-filter: blur(10px);
         border: var(--glass-border);
         border-radius: var(--radius-sm);
-        padding: var(--spacing-md);
+        padding: var(--spacing-2sm);
         margin-top: 2px;
         min-height: 120px;
         display: flex;
@@ -341,7 +331,7 @@
         font-size: 48px;
         color: var(--primary-color);
         margin-bottom: var(--spacing-lg);
-        opacity: 0.8;
+        opacity: 0%.8;
       }
 
       .department-notice h3 {
@@ -363,7 +353,7 @@
         border: 1px solid rgba(255, 255, 255, 0.08);
         border-radius: var(--radius-sm);
         color: var(--text-primary);
-        padding: var(--spacing-sm);
+        padding: var(--spacing-2sm);
         font-size: 13px;
         resize: vertical;
         min-height: 300px;
@@ -422,7 +412,7 @@
       }
 
       .employee-assignment {
-        padding: var(--spacing-sm);
+        padding: var(--spacing-2sm);
         height: 100%;
         display: flex;
         flex-direction: column;
@@ -495,11 +485,11 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        opacity: 0;
+        opacity: 0%;
       }
 
       .employee-card:hover .remove-btn {
-        opacity: 1;
+        opacity: 100%;
       }
 
       .employee-card .remove-btn:hover {
@@ -531,7 +521,6 @@
         line-height: 1.2;
         padding: var(--spacing-md) var(--spacing-lg);
         backdrop-filter: blur(40px) saturate(180%);
-        -webkit-backdrop-filter: blur(40px) saturate(180%);
         border-radius: 14px;
         box-shadow:
           0 2px 6px rgb(0, 0, 0),
@@ -543,7 +532,7 @@
       }
 
       .employee-item {
-        padding: var(--spacing-md);
+        padding: var(--spacing-2sm);
         border: 1px solid rgba(255, 255, 255, 0.08);
         border-radius: var(--radius-md);
         margin-bottom: var(--spacing-md);
@@ -567,14 +556,14 @@
       }
 
       .employee-item.dragging {
-        opacity: 0.5;
+        opacity: 0%.5;
         transform: rotate(5deg);
         cursor: grabbing;
         z-index: 1000;
       }
 
       .employee-item.unavailable {
-        opacity: 0.6;
+        opacity: 0%.6;
         cursor: not-allowed;
       }
 
@@ -792,6 +781,21 @@
                   </div>
                 </div>
                 <input type="hidden" id="departmentSelect" />
+              </div>
+              <div class="info-item">
+                <div class="info-label">Team</div>
+                <div class="custom-dropdown">
+                  <div class="dropdown-display" id="teamDisplay" onclick="toggleDropdown('team')">
+                    <span>Team wählen...</span>
+                    <svg width="12" height="8" viewBox="0 0 12 8" fill="none">
+                      <path d="M1 1L6 6L11 1" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+                    </svg>
+                  </div>
+                  <div class="dropdown-options" id="teamDropdown">
+                    <!-- Options will be populated dynamically -->
+                  </div>
+                </div>
+                <input type="hidden" id="teamSelect" />
               </div>
               <div class="info-item">
                 <div class="info-label">Maschine</div>
@@ -1081,6 +1085,7 @@
     <script type="module" src="/scripts/shifts.ts"></script>
     <script type="module" src="/scripts/utils/modal-manager.ts"></script>
     <script type="module" src="/scripts/components/unified-navigation.ts"></script>
+    <script type="module" src="/scripts/role-switch.ts"></script>
     <!-- Breadcrumb -->
     <script type="module" src="/scripts/components/breadcrumb.js"></script>
   </body>

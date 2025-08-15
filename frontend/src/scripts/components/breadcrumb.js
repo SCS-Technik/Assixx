@@ -71,8 +71,14 @@ const urlMappings = {
   '/pages/feature-management': { label: 'Feature Management', icon: 'fa-toggle-on' },
   '/org-management': { label: 'Organisation Verwaltung', icon: 'fa-building' },
   '/pages/org-management': { label: 'Organisation Verwaltung', icon: 'fa-building' },
-  '/departments': { label: 'Abteilungen', icon: 'fa-sitemap' },
-  '/pages/departments': { label: 'Abteilungen', icon: 'fa-sitemap' },
+  '/manage-departments': { label: 'Abteilungen verwalten', icon: 'fa-sitemap' },
+  '/pages/manage-departments': { label: 'Abteilungen verwalten', icon: 'fa-sitemap' },
+  '/manage-areas': { label: 'Bereiche verwalten', icon: 'fa-building' },
+  '/pages/manage-areas': { label: 'Bereiche verwalten', icon: 'fa-building' },
+  '/manage-teams': { label: 'Teams verwalten', icon: 'fa-users' },
+  '/pages/manage-teams': { label: 'Teams verwalten', icon: 'fa-users' },
+  '/manage-machines': { label: 'Maschinen verwalten', icon: 'fa-industry' },
+  '/pages/manage-machines': { label: 'Maschinen verwalten', icon: 'fa-industry' },
   '/manage-department-groups': { label: 'Abteilungsgruppen', icon: 'fa-layer-group' },
   '/pages/manage-department-groups': { label: 'Abteilungsgruppen', icon: 'fa-layer-group' },
   '/archived-employees': { label: 'Archivierte Mitarbeiter', icon: 'fa-archive' },
@@ -151,7 +157,6 @@ function injectStyles() {
         align-items: center;
         gap: 8px;
         /*backdrop-filter: blur(20px) saturate(180%);*/
-        -webkit-backdrop-filter: blur(20px) saturate(180%);
         border-radius: 12px;
         /*box-shadow: 0 0px 4px rgba(33,150,243,.3),inset 0 1px 0 hsla(0,0%,100%,.2);*/
         color: #fff;
@@ -415,8 +420,8 @@ function generateBreadcrumbsFromURL() {
           icon: 'fa-tachometer-alt',
         });
         items.push({
-          label: 'Abteilungen',
-          href: '/departments',
+          label: 'Abteilungen verwalten',
+          href: '/manage-departments',
           icon: 'fa-sitemap',
         });
       } else if (
@@ -426,14 +431,14 @@ function generateBreadcrumbsFromURL() {
         currentPage === '/pages/storage-upgrade'
       ) {
         // Diese Seiten können von verschiedenen Dashboards aus erreicht werden
-        const userRole = localStorage.getItem('userRole');
-        if (userRole === 'root') {
+        const currentUserRole = localStorage.getItem('userRole');
+        if (currentUserRole === 'root') {
           items.push({
             label: 'Root Dashboard',
             href: '/root-dashboard',
             icon: 'fa-shield-alt',
           });
-        } else if (userRole === 'admin') {
+        } else if (currentUserRole === 'admin') {
           items.push({
             label: 'Admin Dashboard',
             href: '/admin-dashboard',
@@ -512,7 +517,7 @@ export function initBreadcrumb(customItems = null, customConfig = {}) {
   container.appendChild(breadcrumbElement);
 
   // Event für debugging
-  console.log('Breadcrumb initialisiert:', items);
+  console.info('Breadcrumb initialisiert:', items);
 }
 
 // Auto-Init wenn DOM geladen

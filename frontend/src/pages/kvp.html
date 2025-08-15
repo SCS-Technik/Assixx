@@ -18,6 +18,7 @@
         root.style.setProperty('--card-padding', sidebarCollapsed ? '2rem' : '1.5rem');
       })();
     </script>
+    <script src="/feature-flags.js"></script>
 
     <!-- Dashboard Theme CSS -->
     <!-- Font Awesome -->
@@ -80,12 +81,12 @@
       .filter-btn.active {
         background: var(--primary-color);
         border-color: var(--primary-color);
-        color: white;
+        color: #fff;
       }
 
       .filter-btn .badge {
         background: rgba(255, 255, 255, 0.2);
-        color: white;
+        color: #fff;
         padding: 2px 8px;
         border-radius: 12px;
         font-size: 0.8rem;
@@ -128,7 +129,7 @@
         background: rgba(255, 182, 107, 0.1);
         border: 1px solid rgba(255, 182, 107, 0.3);
         border-radius: var(--radius-md);
-        padding: var(--spacing-md);
+        padding: var(--spacing-2sm);
         margin-top: var(--spacing-lg);
         margin-bottom: var(--spacing-lg);
         display: flex;
@@ -338,7 +339,7 @@
         background: var(--primary-color);
         border: none;
         border-radius: 50%;
-        color: white;
+        color: #fff;
         font-size: 1.5rem;
         cursor: pointer;
         box-shadow: 0 8px 24px rgba(33, 150, 243, 0.4);
@@ -382,7 +383,7 @@
         backdrop-filter: blur(10px);
         border: 1px solid rgba(255, 255, 255, 0.1);
         border-radius: var(--radius-md);
-        padding: var(--spacing-md);
+        padding: var(--spacing-2sm);
         text-align: center;
         box-shadow: var(--shadow-sm);
       }
@@ -454,20 +455,19 @@
         right: 0;
         background: rgba(18, 18, 18, 0.8);
         backdrop-filter: blur(20px) saturate(180%);
-        -webkit-backdrop-filter: blur(20px) saturate(180%);
         border: 1px solid hsla(0, 0%, 100%, 0.1);
         border-radius: var(--radius-sm);
         box-shadow: var(--shadow-sm);
         max-height: 200px;
         overflow-y: auto;
-        opacity: 0;
+        opacity: 0%;
         visibility: hidden;
         transform: translateY(-10px);
         z-index: 1001;
       }
 
       .dropdown-options.active {
-        opacity: 1;
+        opacity: 100%;
         visibility: visible;
         transform: translateY(0);
       }
@@ -512,23 +512,21 @@
         height: 100%;
         background-color: rgba(0, 0, 0, 0.7);
         backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
         display: flex;
         justify-content: center;
         align-items: center;
-        opacity: 0;
+        opacity: 0%;
         visibility: hidden;
       }
 
       .modal.active {
-        opacity: 1;
+        opacity: 100%;
         visibility: visible;
       }
 
       .modal-content {
-        background: #1a1a1a4a;
+        background: hsla(0, 0%, 8.2%, 0.84);
         backdrop-filter: blur(20px) saturate(500%);
-        -webkit-backdrop-filter: blur(20px) saturate(180%);
         border: 1px solid rgba(255, 255, 255, 0.1);
         border-radius: var(--radius-md);
         box-shadow: var(--shadow-sm);
@@ -645,7 +643,7 @@
 
       .btn-primary {
         background: linear-gradient(135deg, var(--primary-color), var(--primary-hover));
-        color: white;
+        color: #fff;
         box-shadow:
           0 1px 4px rgba(33, 150, 243, 0.3),
           inset 0 1px 0 rgba(255, 255, 255, 0.2);
@@ -676,7 +674,7 @@
         background: rgba(255, 152, 0, 0.1);
         border: 1px solid rgba(255, 152, 0, 0.3);
         border-radius: var(--radius-sm);
-        padding: var(--spacing-md);
+        padding: var(--spacing-2sm);
         margin-bottom: var(--spacing-lg);
         display: flex;
         align-items: flex-start;
@@ -775,7 +773,7 @@
         top: 4px;
         right: 4px;
         background: rgba(244, 67, 54, 0.9);
-        color: white;
+        color: #fff;
         border: none;
         border-radius: 50%;
         width: 24px;
@@ -1272,6 +1270,7 @@
     <script type="module" src="/scripts/utils/modal-manager.ts"></script>
     <script type="module" src="/scripts/pages/kvp.ts"></script>
     <script type="module" src="/scripts/components/unified-navigation.ts"></script>
+    <script type="module" src="/scripts/role-switch.ts"></script>
 
     <!-- Breadcrumb Component -->
     <script type="module">

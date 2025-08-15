@@ -125,11 +125,11 @@ export class KVPService {
   /**
    * Get all categories for a tenant
    */
-  async getCategories(_tenantId: number) {
+  async getCategories(_tenantId: number): Promise<unknown[]> {
     try {
       const categories = await KVPModel.getCategories();
       return categories.map((category) => dbToApi(category));
-    } catch (error) {
+    } catch (error: unknown) {
       throw new ServiceError("SERVER_ERROR", "Failed to get categories", error);
     }
   }
@@ -142,7 +142,15 @@ export class KVPService {
     userId: number,
     userRole: string,
     filters: KVPFilters = {},
-  ) {
+  ): Promise<{
+    suggestions: unknown[];
+    pagination: {
+      currentPage: number;
+      totalPages: number;
+      pageSize: number;
+      totalItems: number;
+    };
+  }> {
     try {
       const offset = ((filters.page ?? 1) - 1) * (filters.limit ?? 20);
 
@@ -160,7 +168,7 @@ export class KVPService {
 
       // Apply search filter if provided
       let filteredSuggestions = suggestions;
-      if (filters.search) {
+      if (filters.search !== undefined && filters.search !== "") {
         const searchLower = filters.search.toLowerCase();
         filteredSuggestions = suggestions.filter(
           (s) =>
@@ -188,7 +196,7 @@ export class KVPService {
           totalItems: filteredSuggestions.length,
         },
       };
-    } catch (error) {
+    } catch (error: unknown) {
       throw new ServiceError(
         "SERVER_ERROR",
         "Failed to list suggestions",
@@ -217,7 +225,7 @@ export class KVPService {
       throw new ServiceError("NOT_FOUND", "Suggestion not found");
     }
 
-    return dbToApi(suggestion);
+    return dbToApi(suggestion) as unknown as KVPSuggestion;
   }
 
   /**
@@ -227,7 +235,7 @@ export class KVPService {
     data: KVPCreateData,
     tenantId: number,
     userId: number,
-  ) {
+  ): Promise<KVPSuggestion> {
     try {
       const suggestionData = {
         tenant_id: tenantId,
@@ -259,8 +267,8 @@ export class KVPService {
         );
       }
 
-      return dbToApi(suggestion);
-    } catch (error) {
+      return dbToApi(suggestion) as unknown as KVPSuggestion;
+    } catch (error: unknown) {
       throw new ServiceError(
         "SERVER_ERROR",
         "Failed to create suggestion",
@@ -278,7 +286,7 @@ export class KVPService {
     tenantId: number,
     userId: number,
     userRole: string,
-  ) {
+  ): Promise<KVPSuggestion> {
     // First, check if the suggestion exists and user has access
     const existing = await this.getSuggestionById(
       id,
@@ -339,7 +347,7 @@ export class KVPService {
         userRole,
       );
       return updated;
-    } catch (error) {
+    } catch (error: unknown) {
       throw new ServiceError(
         "SERVER_ERROR",
         "Failed to update suggestion",
@@ -356,7 +364,7 @@ export class KVPService {
     tenantId: number,
     userId: number,
     userRole: string,
-  ) {
+  ): Promise<{ message: string }> {
     // Check if suggestion exists and user has access
     const suggestion = await this.getSuggestionById(
       id,
@@ -378,7 +386,8 @@ export class KVPService {
       if (!result) {
         throw new ServiceError("SERVER_ERROR", "Failed to delete suggestion");
       }
-    } catch (error) {
+      return { message: "Suggestion deleted successfully" };
+    } catch (error: unknown) {
       throw new ServiceError(
         "SERVER_ERROR",
         "Failed to delete suggestion",
@@ -395,14 +404,14 @@ export class KVPService {
     tenantId: number,
     userId: number,
     userRole: string,
-  ) {
+  ): Promise<unknown[]> {
     // Verify access to the suggestion first
     await this.getSuggestionById(suggestionId, tenantId, userId, userRole);
 
     try {
       const comments = await KVPModel.getComments(suggestionId, userRole);
       return comments.map((comment) => dbToApi(comment));
-    } catch (error) {
+    } catch (error: unknown) {
       throw new ServiceError("SERVER_ERROR", "Failed to get comments", error);
     }
   }
@@ -416,7 +425,7 @@ export class KVPService {
     tenantId: number,
     userId: number,
     userRole: string,
-  ) {
+  ): Promise<unknown> {
     // Verify access to the suggestion first
     await this.getSuggestionById(suggestionId, tenantId, userId, userRole);
 
@@ -435,7 +444,7 @@ export class KVPService {
         isInternal: data.isInternal ?? false,
         createdAt: new Date(),
       };
-    } catch (error) {
+    } catch (error: unknown) {
       throw new ServiceError("SERVER_ERROR", "Failed to add comment", error);
     }
   }
@@ -448,14 +457,14 @@ export class KVPService {
     tenantId: number,
     userId: number,
     userRole: string,
-  ) {
+  ): Promise<unknown[]> {
     // Verify access to the suggestion first
     await this.getSuggestionById(suggestionId, tenantId, userId, userRole);
 
     try {
       const attachments = await KVPModel.getAttachments(suggestionId);
       return attachments.map((attachment) => dbToApi(attachment));
-    } catch (error) {
+    } catch (error: unknown) {
       throw new ServiceError(
         "SERVER_ERROR",
         "Failed to get attachments",
@@ -473,7 +482,7 @@ export class KVPService {
     tenantId: number,
     userId: number,
     userRole: string,
-  ) {
+  ): Promise<unknown> {
     // Verify access to the suggestion first
     await this.getSuggestionById(suggestionId, tenantId, userId, userRole);
 
@@ -487,7 +496,7 @@ export class KVPService {
       });
 
       return dbToApi(result as unknown as Record<string, unknown>);
-    } catch (error) {
+    } catch (error: unknown) {
       throw new ServiceError("SERVER_ERROR", "Failed to add attachment", error);
     }
   }
@@ -500,7 +509,7 @@ export class KVPService {
     tenantId: number,
     userId: number,
     userRole: string,
-  ) {
+  ): Promise<unknown> {
     const attachment = await KVPModel.getAttachment(
       attachmentId,
       tenantId,
@@ -512,7 +521,7 @@ export class KVPService {
       throw new ServiceError("NOT_FOUND", "Attachment not found");
     }
 
-    return dbToApi(attachment);
+    return dbToApi(attachment) as unknown;
   }
 
   /**
@@ -523,7 +532,7 @@ export class KVPService {
     tenantId: number,
     awardedBy: number,
     userRole: string,
-  ) {
+  ): Promise<unknown> {
     // Only admins can award points
     if (userRole !== "admin" && userRole !== "root") {
       throw new ServiceError("FORBIDDEN", "Only admins can award points");
@@ -548,7 +557,7 @@ export class KVPService {
         awardedBy,
         createdAt: new Date(),
       };
-    } catch (error) {
+    } catch (error: unknown) {
       throw new ServiceError("SERVER_ERROR", "Failed to award points", error);
     }
   }
@@ -556,11 +565,11 @@ export class KVPService {
   /**
    * Get user points summary
    */
-  async getUserPoints(tenantId: number, userId: number) {
+  async getUserPoints(tenantId: number, userId: number): Promise<unknown> {
     try {
       const points = await KVPModel.getUserPoints(tenantId, userId);
-      return dbToApi(points);
-    } catch (error) {
+      return dbToApi(points) as unknown;
+    } catch (error: unknown) {
       throw new ServiceError(
         "SERVER_ERROR",
         "Failed to get user points",
@@ -572,11 +581,11 @@ export class KVPService {
   /**
    * Get dashboard statistics
    */
-  async getDashboardStats(tenantId: number) {
+  async getDashboardStats(tenantId: number): Promise<unknown> {
     try {
       const stats = await KVPModel.getDashboardStats(tenantId);
-      return dbToApi(stats);
-    } catch (error) {
+      return dbToApi(stats) as unknown;
+    } catch (error: unknown) {
       throw new ServiceError(
         "SERVER_ERROR",
         "Failed to get dashboard stats",

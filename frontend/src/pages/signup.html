@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Registrieren - Assixx</title>
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
-    <link href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@400;500;700&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@100;200;300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
     <link href="https://fonts.googleapis.com/css2?family=Noto+Color+Emoji&display=swap" rel="stylesheet" />
     <style>
       @import url('/styles/dashboard-theme.css');
@@ -15,7 +15,18 @@
       /* Emoji Font Support */
       .country-option,
       #selectedFlag {
-        font-family: 'Ubuntu', 'Noto Color Emoji', 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', sans-serif;
+        font-family:
+          'Geist',
+          'Noto Color Emoji',
+          'Apple Color Emoji',
+          'Segoe UI Emoji',
+          'Segoe UI Symbol',
+          -apple-system,
+          BlinkMacSystemFont,
+          'Segoe UI',
+          Roboto,
+          Arial,
+          sans-serif;
       }
 
       body {
@@ -24,7 +35,7 @@
         align-items: center;
         justify-content: center;
         padding: 10px;
-        background: #121212;
+        background: #000000;
         position: relative;
         overflow-x: hidden;
       }
@@ -36,8 +47,8 @@
         left: 0;
         right: 0;
         bottom: 0;
-        background: radial-gradient(circle at 50% 50%, #1e1e1e 0%, #121212 50%, #0a0a0a 100%);
-        opacity: 0.9;
+        /*background: radial-gradient(circle at 50% 50%, #1e1e1e 0%, #121212 50%, #0a0a0a 100%);*/
+        opacity: 0%.9;
         z-index: -1;
       }
 
@@ -56,7 +67,6 @@
       .signup-container {
         background: rgba(255, 255, 255, 0.02);
         backdrop-filter: blur(20px) saturate(180%);
-        -webkit-backdrop-filter: blur(20px) saturate(180%);
         border-radius: var(--radius-md);
         box-shadow: var(--shadow-sm);
         border: 1px solid hsla(0, 0%, 100%, 0.1);
@@ -69,11 +79,11 @@
 
       @keyframes fadeInUp {
         from {
-          opacity: 0;
+          opacity: 0%;
           transform: translateY(30px);
         }
         to {
-          opacity: 1;
+          opacity: 100%;
           transform: translateY(0);
         }
       }
@@ -109,7 +119,7 @@
         color: var(--text-secondary);
         font-size: 14px;
         margin: 0;
-        opacity: 0.7;
+        opacity: 0%.7;
       }
 
       /* Kompakte Pricing Info */
@@ -175,7 +185,7 @@
 
       .form-control::placeholder {
         color: var(--text-secondary);
-        opacity: 0.4;
+        opacity: 0%.4;
         font-size: 13px;
       }
 
@@ -234,7 +244,7 @@
 
       .country-display svg {
         margin-left: auto;
-        opacity: 0.6;
+        opacity: 0%.6;
       }
 
       .country-display.active svg {
@@ -254,14 +264,14 @@
         box-shadow: var(--shadow-sm);
         max-height: 200px;
         overflow-y: auto;
-        opacity: 0;
+        opacity: 0%;
         visibility: hidden;
         transform: translateY(-10px);
         z-index: 1000;
       }
 
       .country-dropdown.active {
-        opacity: 1;
+        opacity: 100%;
         visibility: visible;
         transform: translateY(0);
       }
@@ -280,7 +290,7 @@
 
       .country-option:hover {
         background: rgba(33, 150, 243, 0.2);
-        color: white;
+        color: #fff;
         padding-left: 16px;
       }
 
@@ -336,7 +346,7 @@
       }
 
       .plan-display svg {
-        opacity: 0.6;
+        opacity: 0%.6;
       }
 
       .plan-display.active svg {
@@ -354,14 +364,14 @@
         border: 1px solid hsla(0, 0%, 100%, 0.1);
         border-radius: var(--radius-sm);
         box-shadow: var(--shadow-sm);
-        opacity: 0;
+        opacity: 0%;
         visibility: hidden;
         transform: translateY(-10px);
         z-index: 1000;
       }
 
       .plan-dropdown.active {
-        opacity: 1;
+        opacity: 100%;
         visibility: visible;
         transform: translateY(0);
       }
@@ -383,7 +393,7 @@
 
       .plan-option:hover {
         background: rgba(33, 150, 243, 0.2);
-        color: white;
+        color: #fff;
         padding-left: 20px;
       }
 
@@ -398,7 +408,7 @@
       }
 
       .plan-option:hover .plan-price {
-        color: white;
+        color: #fff;
       }
 
       .error-message {
@@ -448,7 +458,7 @@
       .submit-button {
         padding: 10px 24px;
         background: linear-gradient(135deg, var(--primary-color), var(--primary-hover));
-        color: white;
+        color: #fff;
         border: none;
         border-radius: var(--radius-sm);
         font-size: 15px;
@@ -484,7 +494,7 @@
       }
 
       .submit-button:disabled {
-        opacity: 0.6;
+        opacity: 0%.6;
         cursor: not-allowed;
         transform: none;
       }
@@ -612,7 +622,7 @@
       /* Edge Legacy */
       .form-control:-ms-input-placeholder {
         color: var(--text-secondary);
-        opacity: 0.6;
+        opacity: 0%.6;
       }
 
       /* Phone input specific autofill */
@@ -660,6 +670,8 @@
         }
       }
     </style>
+    <!-- Feature Flags for API v2 Migration -->
+    <script src="/feature-flags.js"></script>
   </head>
   <body>
     <!-- Back to Homepage Button -->
@@ -895,18 +907,18 @@
       }
 
       /* Pulse Animation für Logo */
-      .signup-logo {
-        /* animation: subtle-pulse 3s ease-in-out infinite; */
-      }
+      /* .signup-logo {
+        animation: subtle-pulse 3s ease-in-out infinite;
+      } */
 
       @keyframes subtle-pulse {
         0%,
         100% {
-          opacity: 1;
+          opacity: 100%;
           transform: scale(1);
         }
         50% {
-          opacity: 0.95;
+          opacity: 0%.95;
           transform: scale(1.02);
         }
       }
@@ -931,7 +943,6 @@
         padding: 12px 20px;
         background: rgba(255, 255, 255, 0.02);
         backdrop-filter: blur(20px) saturate(180%);
-        -webkit-backdrop-filter: blur(20px) saturate(180%);
         border: 1px solid rgba(255, 255, 255, 0.1);
         border-radius: 12px;
         color: var(--text-secondary);
@@ -1197,18 +1208,35 @@
         const phoneNumber = data.phone;
         const fullPhone = `${currentCountryCode}${phoneNumber.replace(/\s+/g, '')}`;
 
-        // Add root user credentials
-        const signupData = {
-          company_name: data.company_name,
-          subdomain: data.subdomain,
-          email: data.email,
-          admin_email: data.email,
-          admin_password: data.password,
-          admin_first_name: data.first_name,
-          admin_last_name: data.last_name,
-          phone: fullPhone,
-          plan: currentPlan,
-        };
+        // Check if v2 API should be used
+        const useV2 = window.FEATURE_FLAGS && window.FEATURE_FLAGS.USE_API_V2_SIGNUP;
+
+        // Add root user credentials - use camelCase for v2, snake_case for v1
+        const signupData = useV2
+          ? {
+              // v2 format (camelCase)
+              companyName: data.company_name,
+              subdomain: data.subdomain,
+              email: data.email,
+              adminEmail: data.email,
+              adminPassword: data.password,
+              adminFirstName: data.first_name,
+              adminLastName: data.last_name,
+              phone: fullPhone,
+              plan: currentPlan,
+            }
+          : {
+              // v1 format (snake_case)
+              company_name: data.company_name,
+              subdomain: data.subdomain,
+              email: data.email,
+              admin_email: data.email,
+              admin_password: data.password,
+              admin_first_name: data.first_name,
+              admin_last_name: data.last_name,
+              phone: fullPhone,
+              plan: currentPlan,
+            };
 
         const submitButton = e.target.querySelector('button[type="submit"]');
         const originalText = submitButton.innerHTML;
@@ -1217,7 +1245,12 @@
           submitButton.disabled = true;
           submitButton.innerHTML = '⏳ Wird erstellt...';
 
-          const response = await fetch('/api/signup', {
+          // API URL based on feature flag (useV2 already defined above)
+          const apiUrl = useV2 ? '/api/v2/signup' : '/api/signup';
+
+          console.info(`[Signup] Using ${useV2 ? 'v2' : 'v1'} API at ${apiUrl}`);
+
+          const response = await fetch(apiUrl, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -1235,7 +1268,20 @@
             result = { message: 'Server response was not valid JSON: ' + responseText };
           }
 
-          if (response.ok) {
+          // Handle v2 response format
+          if (useV2 && result.success === false) {
+            // v2 error format
+            const errorMessage = result.error?.message || result.message || 'Fehler bei der Registrierung';
+            alert(errorMessage);
+            submitButton.disabled = false;
+            submitButton.innerHTML = originalText;
+            return;
+          }
+
+          if (response.ok || (useV2 && result.success)) {
+            // Extract data from v2 response if needed
+            const responseData = useV2 && result.data ? result.data : result;
+
             document.getElementById('successMessage').style.display = 'block';
             document.getElementById('successMessage').innerHTML =
               `✅ <strong>Erfolgreich registriert!</strong> Sie werden in 3 Sekunden zur Anmeldung weitergeleitet...`;
@@ -1248,6 +1294,7 @@
               window.location.href = '/login';
             }, 3000);
           } else {
+            // v1 error handling
             alert(result.message || 'Fehler bei der Registrierung');
             submitButton.disabled = false;
             submitButton.innerHTML = originalText;

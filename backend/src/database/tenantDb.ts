@@ -20,7 +20,7 @@ const connectionCache: Record<string, Pool> = {};
  */
 export async function createTenantConnection(tenantId: string): Promise<Pool> {
   // Prüfe ob Verbindung bereits im Cache
-  if (connectionCache[tenantId]) {
+  if (tenantId in connectionCache) {
     return connectionCache[tenantId];
   }
 
@@ -37,7 +37,7 @@ export async function createTenantConnection(tenantId: string): Promise<Pool> {
       queueLimit: 0,
     };
 
-    console.log(
+    console.info(
       `Verwende Datenbank ${dbConfig.database} für Tenant ${tenantId} (Entwicklungsmodus)`,
     );
 
@@ -51,9 +51,9 @@ export async function createTenantConnection(tenantId: string): Promise<Pool> {
     // Im Cache speichern
     connectionCache[tenantId] = pool;
 
-    console.log(`Datenbankverbindung für Tenant ${tenantId} erstellt`);
+    console.info(`Datenbankverbindung für Tenant ${tenantId} erstellt`);
     return pool;
-  } catch (error) {
+  } catch (error: unknown) {
     console.error(
       `Fehler beim Erstellen der DB-Verbindung für ${tenantId}:`,
       error,
@@ -73,7 +73,7 @@ export async function initializeTenantDatabase(
 ): Promise<void> {
   // Im Entwicklungsmodus verwenden wir die Haupt-Datenbank
   if (process.env.NODE_ENV === "development") {
-    console.log(
+    console.info(
       `Dev-Modus: Verwende vorhandene Datenbank für Tenant ${tenantId}`,
     );
     return;
@@ -113,8 +113,8 @@ export async function initializeTenantDatabase(
       }
     }
 
-    console.log(`Datenbank für Tenant ${tenantId} initialisiert`);
-  } catch (error) {
+    console.info(`Datenbank für Tenant ${tenantId} initialisiert`);
+  } catch (error: unknown) {
     console.error(
       `Fehler beim Initialisieren der Tenant-DB ${tenantId}:`,
       error,
@@ -133,8 +133,8 @@ export async function closeAllConnections(): Promise<void> {
   for (const [tenantId, pool] of Object.entries(connectionCache)) {
     try {
       await pool.end();
-      console.log(`Verbindung für Tenant ${tenantId} geschlossen`);
-    } catch (error) {
+      console.info(`Verbindung für Tenant ${tenantId} geschlossen`);
+    } catch (error: unknown) {
       console.error(
         `Fehler beim Schließen der Verbindung für ${tenantId}:`,
         error,

@@ -103,12 +103,12 @@ describe("Departments v2 API Endpoints", () => {
     });
 
     if (adminLoginRes.status !== 200) {
-      console.log(
+      console.info(
         "Admin login failed:",
         adminLoginRes.status,
         adminLoginRes.body,
       );
-      console.log("Tried to login with email:", adminUser.email);
+      console.info("Tried to login with email:", adminUser.email);
       throw new Error("Admin login failed");
     }
     adminTokenV2 = adminLoginRes.body.data.accessToken;
@@ -121,12 +121,12 @@ describe("Departments v2 API Endpoints", () => {
       });
 
     if (employeeLoginRes.status !== 200) {
-      console.log(
+      console.info(
         "Employee login failed:",
         employeeLoginRes.status,
         employeeLoginRes.body,
       );
-      console.log("Tried to login with email:", employeeUser.email);
+      console.info("Tried to login with email:", employeeUser.email);
       throw new Error("Employee login failed");
     }
     employeeTokenV2 = employeeLoginRes.body.data.accessToken;
@@ -137,8 +137,12 @@ describe("Departments v2 API Endpoints", () => {
     });
 
     if (rootLoginRes.status !== 200) {
-      console.log("Root login failed:", rootLoginRes.status, rootLoginRes.body);
-      console.log("Tried to login with email:", rootUser.email);
+      console.info(
+        "Root login failed:",
+        rootLoginRes.status,
+        rootLoginRes.body,
+      );
+      console.info("Tried to login with email:", rootUser.email);
       throw new Error("Root login failed");
     }
     rootTokenV2 = rootLoginRes.body.data.accessToken;
@@ -149,12 +153,12 @@ describe("Departments v2 API Endpoints", () => {
     });
 
     if (tenant2LoginRes.status !== 200) {
-      console.log(
+      console.info(
         "Tenant2 login failed:",
         tenant2LoginRes.status,
         tenant2LoginRes.body,
       );
-      console.log("Tried to login with email:", tenant2User.email);
+      console.info("Tried to login with email:", tenant2User.email);
       throw new Error("Tenant2 login failed");
     }
     tenant2TokenV2 = tenant2LoginRes.body.data.accessToken;
@@ -273,7 +277,7 @@ describe("Departments v2 API Endpoints", () => {
       await createTestDepartment(
         testDb,
         tenant2Id,
-        `Tenant2 Test Dept ${Date.now()}`,
+        `Tenant2 Test Dept ${String(Date.now())}`,
       );
 
       const response = await request(app)
@@ -578,7 +582,7 @@ describe("Departments v2 API Endpoints", () => {
   describe("Multi-tenant isolation", () => {
     it("should completely isolate department data between tenants", async () => {
       // Create a department for tenant2 to test isolation
-      const tenant2TestDeptName = `Tenant2 Private Dept ${Date.now()}`;
+      const tenant2TestDeptName = `Tenant2 Private Dept ${String(Date.now())}`;
       await createTestDepartment(testDb, tenant2Id, tenant2TestDeptName);
 
       // Admin from tenant1 should not see tenant2's departments
@@ -595,7 +599,7 @@ describe("Departments v2 API Endpoints", () => {
       const tenant2DeptId = await createTestDepartment(
         testDb,
         tenant2Id,
-        `Tenant2 Isolation Test ${Date.now()}`,
+        `Tenant2 Isolation Test ${String(Date.now())}`,
       );
 
       // Try to create department in tenant1 with parent from tenant2

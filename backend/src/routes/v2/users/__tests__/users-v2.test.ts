@@ -93,12 +93,12 @@ describe("Users v2 API Endpoints", () => {
       });
 
     if (employeeLoginRes.status !== 200) {
-      console.log(
+      console.info(
         "Employee login failed:",
         employeeLoginRes.status,
         employeeLoginRes.body,
       );
-      console.log("Tried to login with email:", employeeUser.email);
+      console.info("Tried to login with email:", employeeUser.email);
       throw new Error("Employee login failed");
     }
 
@@ -236,14 +236,14 @@ describe("Users v2 API Endpoints", () => {
   describe("POST /api/v2/users", () => {
     it("should create a new user with camelCase input", async () => {
       const newUser = {
-        email: `__AUTOTEST__newuser.v2.${Date.now()}@test.com`, // Make email unique
+        email: `__AUTOTEST__newuser.v2.${String(Date.now())}@test.com`, // Make email unique
         firstName: "New",
         lastName: "UserV2",
         password: "NewPass123!",
         role: "employee",
         departmentId: dept1Id,
         position: "Developer",
-        phone: `+123456${Date.now().toString().slice(-7)}`,
+        phone: `+123456${String(Date.now().toString().slice(-7))}`,
       };
 
       const response = await request(app)
@@ -571,7 +571,7 @@ describe("Users v2 API Endpoints", () => {
       });
       // Check dates separately as they are returned as ISO strings
       // Extract date part from ISO string (YYYY-MM-DD from YYYY-MM-DDTHH:mm:ss.sssZ)
-      console.log(
+      console.info(
         "Availability response:",
         response.body.data.availabilityStart,
         response.body.data.availabilityEnd,

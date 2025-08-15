@@ -1,7 +1,7 @@
 # 🎯 Design Code Maintainability & Variability Guide
 
-> **Zweck:** Code-Qualität optimieren ohne visuelle Änderungen  
-> **Prinzip:** Das perfekte Design bleibt unangetastet - nur der Code wird verbessert  
+> **Zweck:** Code-Qualität optimieren ohne visuelle Änderungen
+> **Prinzip:** Das perfekte Design bleibt unangetastet - nur der Code wird verbessert
 > **Branch:** design-code-maintainability-variability-R2-stable
 
 ## 🚨 WICHTIGSTE REGEL
@@ -575,11 +575,11 @@ const countInlineStyles = () => {
 };
 
 // Progress Report
-console.log("🎯 Migration Progress Report");
-console.log("===========================");
-console.log(`Inline Styles remaining: ${countInlineStyles()}`);
-console.log(`Target: 0`);
-console.log(`Progress: ${100 - (countInlineStyles() / 91) * 100}%`);
+console.info("🎯 Migration Progress Report");
+console.info("===========================");
+console.info(`Inline Styles remaining: ${countInlineStyles()}`);
+console.info(`Target: 0`);
+console.info(`Progress: ${100 - (countInlineStyles() / 91) * 100}%`);
 ```
 
 ## 📊 Erfolgsmetriken & Tracking
@@ -689,8 +689,8 @@ Diese Dinge dürfen NIEMALS passieren:
    - ✅ `padding: 24px` → `var(--spacing-lg)` wenn --spacing-lg = 24px ist
 
 2. **NIEMALS** CSS-Spezifität ignorieren
-   - ❌ `style="color: red"` → `.text-red { color: red; }`
-   - ✅ `style="color: red"` → `.text-red { color: red !important; }`
+   - ❌ `style="color: #f00"` → `.text-red { color: #f00; }`
+   - ✅ `style="color: #f00"` → `.text-red { color: #f00 !important; }`
 
 3. **NIEMALS** Container-Klassen ändern ohne CSS-Check
    - ❌ `.main-content` → `.layout-container` ohne Stil-Vergleich

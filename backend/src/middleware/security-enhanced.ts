@@ -8,7 +8,7 @@ import helmet from "helmet";
 import hpp from "hpp";
 // import { doubleCsrf } from 'csrf-csrf'; // Package not installed
 
-import { AuthenticatedRequest } from "../types/request.types.js";
+import type { AuthenticatedRequest } from "../types/request.types.js";
 
 // Type definitions
 interface AuditEntry {
@@ -57,7 +57,7 @@ export const generateCSRFTokenMiddleware = (
     const token = generateToken(req as AuthenticatedRequest, res);
     res.locals.csrfToken = token;
     next();
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Error generating CSRF token:", error);
     res.status(500).json({ error: "Could not generate CSRF token" });
   }
@@ -70,8 +70,9 @@ export const validateCSRFToken = (
   next: NextFunction,
 ): void => {
   // Skip CSRF validation for API endpoints that use Bearer token authentication
-  if (req.headers.authorization?.startsWith("Bearer ")) {
-    return next();
+  if (req.headers.authorization?.startsWith("Bearer ") === true) {
+    next();
+    return;
   }
 
   // Skip CSRF validation for public endpoints
@@ -85,7 +86,8 @@ export const validateCSRFToken = (
   ];
 
   if (publicEndpoints.some((endpoint) => req.path.startsWith(endpoint))) {
-    return next();
+    next();
+    return;
   }
 
   // Use the CSRF protection middleware
@@ -98,8 +100,8 @@ export const attachCSRFToken = (
   res: Response,
   next: NextFunction,
 ): void => {
-  if (res.locals.csrfToken) {
-    res.setHeader("X-CSRF-Token", res.locals.csrfToken);
+  if (res.locals.csrfToken != null) {
+    res.setHeader("X-CSRF-Token", res.locals.csrfToken as string);
   }
   next();
 };
@@ -114,7 +116,7 @@ export const enforceHTTPS = (
     req.header("x-forwarded-proto") !== "https" &&
     process.env.NODE_ENV === "production"
   ) {
-    res.redirect(`https://${req.header("host")}${req.url}`);
+    res.redirect(`https://${String(req.header("host"))}${req.url}`);
     return;
   }
   next();
@@ -177,7 +179,10 @@ export const securityHeaders = helmet({
 export const corsOptions: cors.CorsOptions = {
   origin(origin, callback) {
     // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
+    if (origin == null || origin === "") {
+      callback(null, true);
+      return;
+    }
 
     // Check if origin matches allowed patterns
     const allowedPatterns = [
@@ -210,10 +215,172 @@ const createTenantRateLimiter = (
   rateLimit({
     windowMs,
     max,
-    keyGenerator: (req) =>
-      // Rate limit per tenant + IP combination
-      `${(req as AuthenticatedRequest).tenant?.id ?? "public"}_${req.ip}`,
-    message: "Too many requests from this tenant/IP, please try again later.",
+    // Remove custom keyGenerator to use default IP handling (IPv4/IPv6 compatible)
+    // Rate limiting will be based on IP address only
+    handler: (_req, res) => {
+      const retryAfter = Math.ceil(windowMs / 1000 / 60); // in minutes
+      res.status(429).send(`
+        <!DOCTYPE html>
+        <html lang="de">
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Zu viele Anfragen - Assixx</title>
+          <link href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@400;500;700&display=swap" rel="stylesheet">
+          <style>
+            :root {
+              --primary-color: #2196f3;
+              --primary-dark: #1976d2;
+              --text-primary: #ffffff;
+              --text-secondary: rgba(255, 255, 255, 0.7);
+              --spacing-md: 16px;
+              --spacing-lg: 24px;
+              --spacing-xl: 32px;
+              --radius-md: 12px;
+            }
+
+            * { margin: 0; padding: 0; box-sizing: border-box; }
+
+            body {
+              font-family: 'Ubuntu', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+              background: #000000;
+              min-height: 100vh;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              padding: 20px;
+              position: relative;
+              overflow-x: hidden;
+            }
+
+            body::before {
+              content: '';
+              position: absolute;
+              top: 0;
+              left: 0;
+              right: 0;
+              bottom: 0;
+              background: radial-gradient(circle at 50% 50%, #1e1e1e 0%, #121212 50%, #0a0a0a 100%);
+              opacity: 0%.9;
+              z-index: -1;
+            }
+
+            body::after {
+              content: '';
+              position: absolute;
+              top: 0;
+              left: 0;
+              right: 0;
+              bottom: 0;
+              background: linear-gradient(5deg, transparent, rgba(0, 142, 255, 0.1) 100%, #01000482 0, rgba(0, 0, 4, 0.6) 100%, #000);
+              z-index: -1;
+            }
+
+            .rate-limit-card {
+              width: 100%;
+              max-width: 450px;
+              background: rgba(255, 255, 255, 0.02);
+              backdrop-filter: blur(20px) saturate(180%);
+              padding: var(--spacing-xl);
+              border-radius: var(--radius-md);
+              box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+              border: 1px solid hsla(0, 0%, 100%, 0.1);
+              text-align: center;
+              animation: fadeInUp 0.6s ease-out;
+            }
+
+            @keyframes fadeInUp {
+              from { opacity: 0%; transform: translateY(30px); }
+              to { opacity: 100%; transform: translateY(0); }
+            }
+
+            .icon {
+              font-size: 64px;
+              margin-bottom: var(--spacing-lg);
+              display: inline-block;
+              animation: pulse 2s infinite;
+            }
+
+            @keyframes pulse {
+              0%, 100% { transform: scale(1); opacity: 100%; }
+              50% { transform: scale(1.1); opacity: 0%.8; }
+            }
+
+            h1 {
+              color: var(--text-primary);
+              font-size: 28px;
+              font-weight: 700;
+              margin-bottom: var(--spacing-md);
+            }
+
+            .message {
+              color: var(--text-secondary);
+              font-size: 16px;
+              line-height: 1.6;
+              margin-bottom: var(--spacing-xl);
+            }
+
+            .retry-info {
+              background: rgba(33, 150, 243, 0.1);
+              border: 1px solid rgba(33, 150, 243, 0.2);
+              border-radius: var(--radius-md);
+              padding: var(--spacing-lg);
+              margin-bottom: var(--spacing-xl);
+            }
+
+            .retry-label {
+              color: var(--text-secondary);
+              font-size: 14px;
+              margin-bottom: 12px;
+            }
+
+            .retry-time {
+              font-size: 32px;
+              color: var(--primary-color);
+              font-weight: 700;
+            }
+
+            .btn-primary {
+              display: inline-block;
+              padding: var(--spacing-md) var(--spacing-xl);
+              background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+              color: #fff;
+              text-decoration: none;
+              border-radius: 8px;
+              font-weight: 500;
+              font-size: 16px;
+              transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+              box-shadow: 0 4px 12px rgba(33, 150, 243, 0.3);
+            }
+
+            .btn-primary:hover {
+              transform: translateY(-2px);
+              box-shadow: 0 6px 20px rgba(33, 150, 243, 0.4);
+            }
+
+            .btn-primary:active {
+              transform: translateY(0);
+            }
+          </style>
+        </head>
+        <body>
+          <div class="rate-limit-card">
+            <div class="icon">⏱️</div>
+            <h1>Zu viele Anfragen</h1>
+            <p class="message">
+              Sie haben die maximale Anzahl an Anfragen überschritten.
+              Bitte warten Sie einen Moment, bevor Sie es erneut versuchen.
+            </p>
+            <div class="retry-info">
+              <div class="retry-label">Versuchen Sie es wieder in:</div>
+              <div class="retry-time">${retryAfter} Minuten</div>
+            </div>
+            <a href="/" class="btn-primary">Zurück zur Startseite</a>
+          </div>
+        </body>
+        </html>
+      `);
+    },
     standardHeaders: true,
     legacyHeaders: false,
     skip: () => process.env.NODE_ENV === "test", // Skip rate limiting in tests
@@ -265,8 +432,7 @@ const createProgressiveRateLimiter = (
   rateLimit({
     windowMs,
     max,
-    keyGenerator: (req) =>
-      `${(req as AuthenticatedRequest).tenant?.id ?? "public"}_${req.ip}`,
+    // Remove custom keyGenerator to use default IP handling (IPv4/IPv6 compatible)
     message: {
       error: "Rate limit exceeded",
       retryAfter: Math.ceil(windowMs / 1000),
@@ -297,7 +463,7 @@ const createProgressiveRateLimiter = (
 export const suspiciousActivityLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
   max: 10, // 10 requests per hour for suspicious IPs
-  keyGenerator: (req) => req.ip ?? "unknown",
+  // Remove custom keyGenerator to use default IP handling (IPv4/IPv6 compatible)
   message: {
     error: "Suspicious activity detected",
     message:
@@ -307,8 +473,7 @@ export const suspiciousActivityLimiter = rateLimit({
   legacyHeaders: false,
   skip: (req) => {
     // Skip for authenticated users with valid sessions
-    const authReq = req as AuthenticatedRequest;
-    return !!(authReq.headers.authorization ?? authReq.user);
+    return req.headers.authorization !== undefined || "user" in req;
   },
 });
 
@@ -328,12 +493,17 @@ export const validateTenantContext = (
   res: Response,
   next: NextFunction,
 ): void => {
-  const authReq = req as AuthenticatedRequest;
-  if (authReq.user && authReq.tenant) {
+  if ("user" in req && "tenant" in req) {
+    const authReq = req as AuthenticatedRequest;
     const userTenant = authReq.user.tenant_id;
-    const requestTenant = authReq.tenant.id;
+    const requestTenant = authReq.tenant?.id;
 
-    if (userTenant && requestTenant && userTenant !== requestTenant) {
+    if (
+      userTenant !== 0 &&
+      requestTenant !== undefined &&
+      requestTenant !== 0 &&
+      userTenant !== requestTenant
+    ) {
       console.error("Tenant access violation:", {
         user: authReq.user.id,
         userTenant,
@@ -357,7 +527,7 @@ export const auditLogger =
     const startTime = Date.now();
 
     // Capture original end function
-    const originalEnd = res.end;
+    const originalEnd = res.end.bind(res);
 
     // Override end function - simplified type assertion for complex overload
     const endFunction = function (
@@ -373,7 +543,7 @@ export const auditLogger =
         // end(chunk, cb)
         (
           originalEnd as (chunk: string | Buffer, cb: () => void) => Response
-        ).call(res, chunk as string | Buffer, encoding);
+        ).call(res, chunk ?? "", encoding);
       } else if (typeof cb === "function") {
         // end(chunk, encoding, cb)
         (
@@ -382,12 +552,7 @@ export const auditLogger =
             encoding: globalThis.BufferEncoding,
             cb: () => void,
           ) => Response
-        ).call(
-          res,
-          chunk as string | Buffer,
-          encoding as globalThis.BufferEncoding,
-          cb,
-        );
+        ).call(res, chunk ?? "", encoding ?? "utf8", cb);
       } else if (encoding !== undefined) {
         // end(chunk, encoding)
         (
@@ -395,17 +560,10 @@ export const auditLogger =
             chunk: string | Buffer,
             encoding: globalThis.BufferEncoding,
           ) => Response
-        ).call(
-          res,
-          chunk as string | Buffer,
-          encoding as globalThis.BufferEncoding,
-        );
+        ).call(res, chunk ?? "", encoding);
       } else if (chunk !== undefined) {
         // end(chunk)
-        (originalEnd as (chunk: string | Buffer) => Response).call(
-          res,
-          chunk as string | Buffer,
-        );
+        (originalEnd as (chunk: string | Buffer) => Response).call(res, chunk);
       } else {
         // end()
         (originalEnd as () => Response).call(res);
@@ -416,7 +574,10 @@ export const auditLogger =
       const auditEntry: AuditEntry = {
         timestamp: new Date().toISOString(),
         tenant_id: authReq.tenant?.id ?? "public",
-        userId: authReq.user?.id ? authReq.user.id.toString() : "anonymous",
+        userId:
+          "user" in authReq && authReq.user.id
+            ? authReq.user.id.toString()
+            : "anonymous",
         action,
         resource,
         method: authReq.method,
@@ -429,7 +590,7 @@ export const auditLogger =
       };
 
       // Log to console (in production, send to SIEM)
-      console.log("AUDIT:", JSON.stringify(auditEntry));
+      console.info("AUDIT:", JSON.stringify(auditEntry));
 
       // TODO: Save to database or send to SIEM system
 
@@ -471,7 +632,11 @@ export const apiSecurityHeaders = (
 export const validateContentType =
   (expectedType: string) =>
   (req: Request, res: Response, next: NextFunction): void => {
-    if (req.is(expectedType) || !req.get("content-type")) {
+    if (
+      req.is(expectedType) !== false ||
+      req.get("content-type") == null ||
+      req.get("content-type") === ""
+    ) {
       next();
     } else {
       res.status(400).json({
@@ -488,13 +653,12 @@ export const fileUploadSecurity = (
 ): void => {
   // Type assertion to access files property from express-extensions
   const uploadReq = req as Request & {
-    files?:
-      | Express.Multer.File[]
-      | { [fieldname: string]: Express.Multer.File[] };
+    files?: Express.Multer.File[] | Record<string, Express.Multer.File[]>;
   };
 
   if (!uploadReq.files || Object.keys(uploadReq.files).length === 0) {
-    return next();
+    next();
+    return;
   }
 
   const allowedMimeTypes = [

@@ -5,8 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Assixx - Die SaaS-Lösung für Industriefirmen</title>
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
-    <link href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@400;500;700&display=swap" rel="stylesheet" />
+    <!-- Geist Google Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@100;200;300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+    <!-- Import main styles with Geist font -->
+    <link rel="stylesheet" href="/styles/fonts-geist.css" />
     <style>
+      @import url('/styles/dashboard-theme.css');
       :root {
         /* Assixx Dark Theme - Konsistent mit Dashboard */
         --primary-color: #2196f3;
@@ -54,11 +58,12 @@
 
       body {
         font-family:
-          'Ubuntu',
+          'Geist',
           -apple-system,
           BlinkMacSystemFont,
           'Segoe UI',
           Roboto,
+          Arial,
           sans-serif;
         background: #000000;
         color: var(--text-primary);
@@ -83,7 +88,6 @@
       .header {
         background: rgba(255, 255, 255, 0.02);
         backdrop-filter: blur(20px) saturate(180%);
-        -webkit-backdrop-filter: blur(20px) saturate(180%);
         padding: 8px 16px;
         box-shadow: var(--shadow-sm);
         position: sticky;
@@ -121,11 +125,11 @@
       @keyframes subtle-pulse {
         0%,
         100% {
-          opacity: 1;
+          opacity: 100%;
           transform: scale(1);
         }
         50% {
-          opacity: 0.95;
+          opacity: 0%.95;
           transform: scale(1.02);
         }
       }
@@ -173,7 +177,7 @@
 
       .btn-primary {
         background: none;
-        color: white;
+        color: #fff;
         box-shadow:
           0 1px 4px rgba(33, 150, 243, 0.3),
           inset 0 1px 0 rgba(255, 255, 255, 0.2);
@@ -224,11 +228,11 @@
 
       @keyframes fadeInUp {
         from {
-          opacity: 0;
+          opacity: 0%;
           transform: translateY(30px);
         }
         to {
-          opacity: 1;
+          opacity: 100%;
           transform: translateY(0);
         }
       }
@@ -432,7 +436,6 @@
         align-items: center;
         justify-content: center;
         backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
       }
 
       .modal-content {
@@ -514,8 +517,8 @@
       .success {
         background: rgba(76, 175, 80, 0.15);
         backdrop-filter: blur(10px);
-        color: white;
-        padding: var(--spacing-md);
+        color: #fff;
+        padding: var(--spacing-2sm);
         border-radius: var(--radius-sm);
         margin-bottom: var(--spacing-md);
         border: 1px solid rgba(76, 175, 80, 0.3);
@@ -559,7 +562,6 @@
         margin-top: 2rem;
         background: rgba(255, 255, 255, 0.02);
         backdrop-filter: blur(20px) saturate(180%);
-        -webkit-backdrop-filter: blur(20px) saturate(180%);
         border-radius: var(--radius-md);
         box-shadow: var(--shadow-sm);
         border: 1px solid hsla(0, 0%, 100%, 0.1);
@@ -574,7 +576,7 @@
 
       .comparison-table th,
       .comparison-table td {
-        padding: var(--spacing-md);
+        padding: var(--spacing-2sm);
         text-align: left;
         border-bottom: 1px solid rgba(255, 255, 255, 0.1);
       }
@@ -652,7 +654,6 @@
 
         /* Starker Glassmorphismus Effekt */
         backdrop-filter: blur(30px) saturate(120%);
-        -webkit-backdrop-filter: blur(30px) saturate(120%);
 
         /* Klarer Text ohne Schatten */
         color: #ffffff;
@@ -703,11 +704,11 @@
 
       @keyframes badge-intro {
         0% {
-          opacity: 0;
+          opacity: 0%;
           transform: translateX(-50%) translateY(-30px) scale(0.8);
         }
         100% {
-          opacity: 1;
+          opacity: 100%;
           transform: translateX(-50%) translateY(0) scale(1);
         }
       }
@@ -787,7 +788,7 @@
 
         .modal-content {
           width: 95%;
-          padding: var(--spacing-md);
+          padding: var(--spacing-2sm);
         }
 
         /* Comparison table responsive */
@@ -797,7 +798,7 @@
 
         .comparison-table th,
         .comparison-table td {
-          padding: var(--spacing-sm);
+          padding: var(--spacing-2sm);
         }
 
         .feature-comparison h3 {
@@ -805,6 +806,8 @@
         }
       }
     </style>
+    <!-- Feature Flags for API v2 Migration -->
+    <script src="/feature-flags.js"></script>
   </head>
   <body>
     <header class="header">
@@ -1040,7 +1043,7 @@
               align-items: center;
               gap: calc(var(--spacing-xl) * 1.5);
               flex-wrap: wrap;
-              opacity: 0.7;
+              opacity: 0%.7;
             "
           >
             <div class="u-fs-09rem">🔒 SSL-verschlüsselt</div>
@@ -1060,7 +1063,7 @@
           color: var(--text-secondary);
           margin-bottom: calc(var(--spacing-xl) * 1.5);
           font-size: 1.1rem;
-          opacity: 0.8;
+          opacity: 0%.8;
         "
       >
         Alle Pläne beinhalten 14 Tage kostenlose Testphase
@@ -1454,29 +1457,32 @@
         const data = Object.fromEntries(formData.entries());
 
         try {
-          const response = await fetch('/api/signup', {
+          const response = await fetch('/api/v2/signup', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-              ...data,
-              admin_email: data.email,
-              admin_password: data.password,
-              admin_first_name: data.first_name,
-              admin_last_name: data.last_name,
+              companyName: data.company_name,
+              subdomain: data.subdomain,
+              email: data.company_email,
+              phone: data.phone,
+              adminEmail: data.email,
+              adminPassword: data.password,
+              adminFirstName: data.first_name,
+              adminLastName: data.last_name,
               selectedPlan: localStorage.getItem('selectedPlan') || 'premium',
             }),
           });
 
-          if (response.ok) {
-            const result = await response.json();
+          const result = await response.json();
+
+          if (result.success) {
             alert(`Erfolg! Sie können sich jetzt unter ${data.subdomain}.assixx.com anmelden.`);
             // Später: Direkte Weiterleitung mit Auto-Login
             window.location.href = `/login`;
           } else {
-            const error = await response.json();
-            alert(error.message || 'Fehler bei der Registrierung');
+            alert(result.error?.message || 'Fehler bei der Registrierung');
           }
         } catch (error) {
           alert('Ein Fehler ist aufgetreten. Bitte versuchen Sie es später erneut.');

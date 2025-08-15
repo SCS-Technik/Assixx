@@ -111,7 +111,7 @@ describe("Teams v2 API Endpoints", () => {
     );
 
     // Debug: Check if users were created
-    console.log("Created users:", {
+    console.info("Created users:", {
       adminUser: adminUser,
       employeeUser: employeeUser,
       rootUser: rootUser,
@@ -131,10 +131,10 @@ describe("Teams v2 API Endpoints", () => {
         adminLoginV2.body,
       );
       throw new Error(
-        `Admin login failed: ${JSON.stringify(adminLoginV2.body)}`,
+        `Admin login failed: ${String(JSON.stringify(adminLoginV2.body))}`,
       );
     }
-    console.log("Admin login response:", adminLoginV2.body);
+    console.info("Admin login response:", adminLoginV2.body);
     adminTokenV2 =
       adminLoginV2.body.data.accessToken || adminLoginV2.body.data.token;
 
@@ -145,7 +145,7 @@ describe("Teams v2 API Endpoints", () => {
 
     if (!employeeLoginV2.body.success) {
       throw new Error(
-        `Employee login failed: ${JSON.stringify(employeeLoginV2.body)}`,
+        `Employee login failed: ${String(JSON.stringify(employeeLoginV2.body))}`,
       );
     }
     employeeTokenV2 =
@@ -157,7 +157,9 @@ describe("Teams v2 API Endpoints", () => {
       .send({ email: rootUser.email, password: "Test1234!" });
 
     if (!rootLoginV2.body.success) {
-      throw new Error(`Root login failed: ${JSON.stringify(rootLoginV2.body)}`);
+      throw new Error(
+        `Root login failed: ${String(JSON.stringify(rootLoginV2.body))}`,
+      );
     }
     rootTokenV2 =
       rootLoginV2.body.data.accessToken || rootLoginV2.body.data.token;
@@ -169,7 +171,7 @@ describe("Teams v2 API Endpoints", () => {
 
     if (!tenant2LoginV2.body.success) {
       throw new Error(
-        `Tenant2 login failed: ${JSON.stringify(tenant2LoginV2.body)}`,
+        `Tenant2 login failed: ${String(JSON.stringify(tenant2LoginV2.body))}`,
       );
     }
     tenant2TokenV2 =

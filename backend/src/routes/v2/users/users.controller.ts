@@ -6,11 +6,13 @@
 import { Response } from "express";
 import { validationResult, ValidationError } from "express-validator";
 
-import { AuthenticatedRequest } from "../../../types/request.types";
+import RootLog from "../../../models/rootLog";
+import type { AuthenticatedRequest } from "../../../types/request.types";
 import {
   successResponse,
   errorResponse,
   paginatedResponse,
+  type PaginationMeta,
 } from "../../../utils/apiResponse";
 import { uploadMiddleware } from "../../../utils/uploadMiddleware";
 
@@ -24,10 +26,21 @@ import {
   ListUsersQuery,
 } from "./users.types";
 
+interface User {
+  id: number;
+  email: string;
+  username: string;
+  firstName: string;
+  lastName: string;
+  role: string;
+  isActive?: boolean;
+  [key: string]: unknown;
+}
+
 // Helper to map validation errors to our error response format
 function mapValidationErrors(
   errors: ValidationError[],
-): Array<{ field: string; message: string }> {
+): { field: string; message: string }[] {
   return errors.map((error) => ({
     field: error.type === "field" ? error.path : "general",
     message: error.msg,
@@ -52,7 +65,7 @@ export const usersController = {
         return;
       }
 
-      if (!req.tenantId) {
+      if (req.tenantId === undefined) {
         res
           .status(401)
           .json(errorResponse("UNAUTHORIZED", "Tenant ID missing"));
@@ -63,8 +76,12 @@ export const usersController = {
         req.query as ListUsersQuery,
       );
 
-      res.json(paginatedResponse(result.data, result.pagination));
-    } catch (error) {
+      const typedResult = result as {
+        data: unknown[];
+        pagination: PaginationMeta;
+      };
+      res.json(paginatedResponse(typedResult.data, typedResult.pagination));
+    } catch (error: unknown) {
       console.error("[Users v2] List error:", error);
       if (error instanceof ServiceError) {
         res
@@ -84,7 +101,7 @@ export const usersController = {
     res: Response,
   ): Promise<void> {
     try {
-      if (!req.userId || !req.tenantId) {
+      if (req.userId === undefined || req.tenantId === undefined) {
         res
           .status(401)
           .json(errorResponse("UNAUTHORIZED", "User ID or Tenant ID missing"));
@@ -92,7 +109,7 @@ export const usersController = {
       }
       const user = await usersService.getUserById(req.userId, req.tenantId);
       res.json(successResponse(user));
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("[Users v2] Get current user error:", error);
       if (error instanceof ServiceError) {
         res
@@ -123,8 +140,8 @@ export const usersController = {
         return;
       }
 
-      const userId = parseInt(req.params.id);
-      if (!req.tenantId) {
+      const userId = parseInt(req.params.id, 10);
+      if (req.tenantId === undefined) {
         res
           .status(401)
           .json(errorResponse("UNAUTHORIZED", "Tenant ID missing"));
@@ -132,7 +149,7 @@ export const usersController = {
       }
       const user = await usersService.getUserById(userId, req.tenantId);
       res.json(successResponse(user));
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("[Users v2] Get user by ID error:", error);
       if (error instanceof ServiceError) {
         res
@@ -164,7 +181,7 @@ export const usersController = {
       }
 
       const body = req.body as CreateUserBody;
-      if (!req.tenantId) {
+      if (req.tenantId === undefined) {
         res
           .status(401)
           .json(errorResponse("UNAUTHORIZED", "Tenant ID missing"));
@@ -172,8 +189,29 @@ export const usersController = {
       }
       const user = await usersService.createUser(body, req.tenantId);
 
+      // Log user creation
+      await RootLog.create({
+        tenant_id: req.tenantId,
+        user_id: req.userId ?? 0,
+        action: "create",
+        entity_type: "user",
+        entity_id: (user as User).id,
+        details: `Benutzer erstellt: ${(user as User).email}`,
+        new_values: {
+          email: (user as User).email,
+          username: (user as User).username,
+          first_name: (user as User).firstName,
+          last_name: (user as User).lastName,
+          role: (user as User).role,
+          created_by: req.user.email,
+        },
+        ip_address: req.ip ?? req.socket.remoteAddress,
+        user_agent: req.get("user-agent"),
+        was_role_switched: false,
+      });
+
       res.status(201).json(successResponse(user, "User created successfully"));
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("[Users v2] Create error:", error);
       if (error instanceof ServiceError) {
         res
@@ -204,18 +242,52 @@ export const usersController = {
         return;
       }
 
-      const userId = parseInt(req.params.id);
+      const userId = parseInt(req.params.id, 10);
       const body = req.body as UpdateUserBody;
-      if (!req.tenantId) {
+      if (req.tenantId === undefined) {
         res
           .status(401)
           .json(errorResponse("UNAUTHORIZED", "Tenant ID missing"));
         return;
       }
+
+      // Get old user data for logging
+      const oldUser = await usersService.getUserById(userId, req.tenantId);
+
       const user = await usersService.updateUser(userId, body, req.tenantId);
 
+      // Log user update
+      await RootLog.create({
+        tenant_id: req.tenantId,
+        user_id: req.userId ?? 0,
+        action: "update",
+        entity_type: "user",
+        entity_id: userId,
+        details: `Benutzer aktualisiert: ${(user as User).email}`,
+        old_values: {
+          email: (oldUser as User | null)?.email,
+          username: (oldUser as User | null)?.username,
+          first_name: (oldUser as User | null)?.firstName,
+          last_name: (oldUser as User | null)?.lastName,
+          role: (oldUser as User | null)?.role,
+          is_active: (oldUser as User | null)?.isActive,
+        },
+        new_values: {
+          email: (user as User).email,
+          username: (user as User).username,
+          first_name: (user as User).firstName,
+          last_name: (user as User).lastName,
+          role: (user as User).role,
+          is_active: (user as User).isActive,
+          updated_by: req.user.email,
+        },
+        ip_address: req.ip ?? req.socket.remoteAddress,
+        user_agent: req.get("user-agent"),
+        was_role_switched: false,
+      });
+
       res.json(successResponse(user, "User updated successfully"));
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("[Users v2] Update error:", error);
       if (error instanceof ServiceError) {
         res
@@ -250,7 +322,7 @@ export const usersController = {
       }
 
       const body = req.body as UpdateProfileBody;
-      if (!req.userId || !req.tenantId) {
+      if (req.userId === undefined || req.tenantId === undefined) {
         res
           .status(401)
           .json(errorResponse("UNAUTHORIZED", "User ID or Tenant ID missing"));
@@ -263,7 +335,7 @@ export const usersController = {
       );
 
       res.json(successResponse(user, "Profile updated successfully"));
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("[Users v2] Update profile error:", error);
       if (error instanceof ServiceError) {
         res
@@ -298,7 +370,7 @@ export const usersController = {
       }
 
       const { currentPassword, newPassword } = req.body as ChangePasswordBody;
-      if (!req.userId || !req.tenantId) {
+      if (req.userId === undefined || req.tenantId === undefined) {
         res
           .status(401)
           .json(errorResponse("UNAUTHORIZED", "User ID or Tenant ID missing"));
@@ -312,7 +384,7 @@ export const usersController = {
       );
 
       res.json(successResponse(null, "Password changed successfully"));
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("[Users v2] Change password error:", error);
       if (error instanceof ServiceError) {
         res
@@ -343,17 +415,42 @@ export const usersController = {
         return;
       }
 
-      const userId = parseInt(req.params.id);
-      if (!req.userId || !req.tenantId) {
+      const userId = parseInt(req.params.id, 10);
+      if (req.userId === undefined || req.tenantId === undefined) {
         res
           .status(401)
           .json(errorResponse("UNAUTHORIZED", "User ID or Tenant ID missing"));
         return;
       }
+
+      // Get user data before deletion for logging
+      const deletedUser = await usersService.getUserById(userId, req.tenantId);
+
       await usersService.deleteUser(userId, req.userId, req.tenantId);
 
+      // Log user deletion
+      await RootLog.create({
+        tenant_id: req.tenantId,
+        user_id: req.userId,
+        action: "delete",
+        entity_type: "user",
+        entity_id: userId,
+        details: `Benutzer gelöscht: ${(deletedUser as User | null)?.email}`,
+        old_values: {
+          email: (deletedUser as User | null)?.email,
+          username: (deletedUser as User | null)?.username,
+          first_name: (deletedUser as User | null)?.firstName,
+          last_name: (deletedUser as User | null)?.lastName,
+          role: (deletedUser as User | null)?.role,
+          deleted_by: req.user.email,
+        },
+        ip_address: req.ip ?? req.socket.remoteAddress,
+        user_agent: req.get("user-agent"),
+        was_role_switched: false,
+      });
+
       res.json(successResponse(null, "User deleted successfully"));
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("[Users v2] Delete error:", error);
       if (error instanceof ServiceError) {
         res
@@ -369,17 +466,17 @@ export const usersController = {
 
   // Archive user
   async archiveUser(req: AuthenticatedRequest, res: Response): Promise<void> {
-    console.log("[DEBUG] archiveUser called");
-    console.log("[DEBUG] req.params:", req.params);
-    console.log("[DEBUG] req.user:", req.user);
-    console.log("[DEBUG] req.tenantId:", req.tenantId);
+    console.info("[DEBUG] archiveUser called");
+    console.info("[DEBUG] req.params:", req.params);
+    console.info("[DEBUG] req.user:", req.user);
+    console.info("[DEBUG] req.tenantId:", req.tenantId);
 
     try {
       // Skip validation for now to debug
       /*
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
-        console.log("[DEBUG] Validation errors found:", errors.array());
+        console.info("[DEBUG] Validation errors found:", errors.array());
         res
           .status(400)
           .json(
@@ -393,8 +490,8 @@ export const usersController = {
       }
       */
 
-      const userId = parseInt(req.params.id);
-      if (!req.tenantId) {
+      const userId = parseInt(req.params.id, 10);
+      if (req.tenantId === undefined) {
         res
           .status(401)
           .json(errorResponse("UNAUTHORIZED", "Tenant ID missing"));
@@ -403,7 +500,7 @@ export const usersController = {
       await usersService.archiveUser(userId, req.tenantId);
 
       res.json(successResponse(null, "User archived successfully"));
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("[Users v2] Archive error:", error);
       if (error instanceof ServiceError) {
         res
@@ -434,8 +531,8 @@ export const usersController = {
         return;
       }
 
-      const userId = parseInt(req.params.id);
-      if (!req.tenantId) {
+      const userId = parseInt(req.params.id, 10);
+      if (req.tenantId === undefined) {
         res
           .status(401)
           .json(errorResponse("UNAUTHORIZED", "Tenant ID missing"));
@@ -444,7 +541,7 @@ export const usersController = {
       await usersService.unarchiveUser(userId, req.tenantId);
 
       res.json(successResponse(null, "User unarchived successfully"));
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("[Users v2] Unarchive error:", error);
       if (error instanceof ServiceError) {
         res
@@ -464,7 +561,7 @@ export const usersController = {
     res: Response,
   ): Promise<void> {
     try {
-      if (!req.userId || !req.tenantId) {
+      if (req.userId === undefined || req.tenantId === undefined) {
         res
           .status(401)
           .json(errorResponse("UNAUTHORIZED", "User ID or Tenant ID missing"));
@@ -474,8 +571,11 @@ export const usersController = {
         req.userId,
         req.tenantId,
       );
+      if (filePath === null) {
+        throw new ServiceError("NOT_FOUND", "Profile picture not found", 404);
+      }
       res.sendFile(filePath);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("[Users v2] Get profile picture error:", error);
       if (error instanceof ServiceError) {
         res
@@ -492,18 +592,16 @@ export const usersController = {
   },
 
   // Upload profile picture
-  async uploadProfilePicture(
-    req: AuthenticatedRequest,
-    res: Response,
-  ): Promise<void> {
+  uploadProfilePicture(req: AuthenticatedRequest, res: Response): void {
     uploadMiddleware.single("profilePicture")(req, res, (err) => {
-      if (err) {
-        res.status(400).json(errorResponse("BAD_REQUEST", err.message));
+      if (err !== null && err !== undefined && err !== "") {
+        const errorMessage = err instanceof Error ? err.message : String(err);
+        res.status(400).json(errorResponse("BAD_REQUEST", errorMessage));
         return;
       }
 
       // Handle async operations in a separate function
-      const handleUpload = async () => {
+      const handleUpload = async (): Promise<void> => {
         try {
           if (!req.file) {
             res
@@ -512,7 +610,7 @@ export const usersController = {
             return;
           }
 
-          if (!req.userId || !req.tenantId) {
+          if (req.userId === undefined || req.tenantId === undefined) {
             res
               .status(401)
               .json(
@@ -529,7 +627,7 @@ export const usersController = {
           res.json(
             successResponse(user, "Profile picture uploaded successfully"),
           );
-        } catch (error) {
+        } catch (error: unknown) {
           console.error("[Users v2] Upload profile picture error:", error);
           if (error instanceof ServiceError) {
             res
@@ -559,7 +657,7 @@ export const usersController = {
     res: Response,
   ): Promise<void> {
     try {
-      if (!req.userId || !req.tenantId) {
+      if (req.userId === undefined || req.tenantId === undefined) {
         res
           .status(401)
           .json(errorResponse("UNAUTHORIZED", "User ID or Tenant ID missing"));
@@ -567,7 +665,7 @@ export const usersController = {
       }
       await usersService.deleteProfilePicture(req.userId, req.tenantId);
       res.json(successResponse(null, "Profile picture deleted successfully"));
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("[Users v2] Delete profile picture error:", error);
       if (error instanceof ServiceError) {
         res
@@ -603,9 +701,9 @@ export const usersController = {
         return;
       }
 
-      const userId = parseInt(req.params.id);
+      const userId = parseInt(req.params.id, 10);
       const body = req.body as UpdateAvailabilityBody;
-      if (!req.tenantId) {
+      if (req.tenantId === undefined) {
         res
           .status(401)
           .json(errorResponse("UNAUTHORIZED", "Tenant ID missing"));
@@ -618,7 +716,7 @@ export const usersController = {
       );
 
       res.json(successResponse(user, "Availability updated successfully"));
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("[Users v2] Update availability error:", error);
       if (error instanceof ServiceError) {
         res

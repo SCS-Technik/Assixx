@@ -4,11 +4,12 @@
  */
 
 // Import types
-import type { User } from '../../../../backend/src/types/models';
+import type { User, Tenant, Document } from '../../types/api.types';
 import type { NavItem } from '../../types/utils.types';
 // Import role switch function
-import { loadUserInfo as loadUserInfoFromAuth } from '../auth';
-import { switchRoleForRoot } from '../role-switch';
+import { apiClient } from '../../utils/api-client';
+// import { loadUserInfo as loadUserInfoFromAuth } from '../auth'; // Currently unused
+import { switchRoleForRoot, switchRoleForAdmin } from '../role-switch';
 
 // Declare global type for window
 declare global {
@@ -32,34 +33,46 @@ interface TokenPayload {
   email?: string;
 }
 
-interface UserProfileResponse {
+interface RoleSwitchMessage {
+  type: string;
+  newRole?: string;
+  token?: string;
+}
+
+interface UserProfileResponse extends User {
   user?: User;
-  username?: string;
-  email?: string;
-  first_name?: string;
-  last_name?: string;
-  birthdate?: string;
-  profile_picture?: string;
+  // Company/Tenant related properties
+  companyName?: string;
+  subdomain?: string;
+  // API v2 returns camelCase fields
   firstName?: string;
   lastName?: string;
-  birthDate?: string;
-  profilePicture?: string;
-  company_name?: string;
-  subdomain?: string;
-  employee_number?: string;
+  employeeId?: string;
   employeeNumber?: string;
+  profilePicture?: string;
+  profilePictureUrl?: string;
+  tenantId?: number;
+  // Additional user properties that may come from API but aren't in base User type
+  data?: {
+    first_name?: string;
+    last_name?: string;
+    profile_picture?: string;
+    employee_number?: string;
+    birthdate?: string;
+    firstName?: string;
+    lastName?: string;
+    employeeId?: string;
+    employeeNumber?: string;
+    profilePicture?: string;
+  };
+  // Tenant information
+  tenant?: Tenant;
 }
 
-interface UnreadCountResponse {
-  unreadCount?: number;
-}
-
-interface PendingCountResponse {
-  pendingCount?: number;
-}
+// Removed unused interfaces
 
 // Access Control Map - Definiert welche Rollen auf welche Seiten zugreifen dürfen
-const accessControlMap: Record<string, Array<'root' | 'admin' | 'employee'>> = {
+const accessControlMap: Record<string, ('root' | 'admin' | 'employee')[]> = {
   // Root-only pages
   '/root-dashboard': ['root'],
   '/pages/root-dashboard': ['root'],
@@ -83,8 +96,8 @@ const accessControlMap: Record<string, Array<'root' | 'admin' | 'employee'>> = {
   '/pages/manage-admins': ['admin', 'root'],
   '/manage-users': ['admin', 'root'],
   '/pages/manage-users': ['admin', 'root'],
-  '/departments': ['admin', 'root'],
-  '/pages/departments': ['admin', 'root'],
+  '/manage-departments': ['admin', 'root'],
+  '/pages/manage-departments': ['admin', 'root'],
   '/manage-department-groups': ['admin', 'root'],
   '/pages/manage-department-groups': ['admin', 'root'],
   '/blackboard': ['admin', 'root'],
@@ -149,18 +162,18 @@ class UnifiedNavigation {
   private currentUser: TokenPayload | null = null;
   private currentRole: 'admin' | 'employee' | 'root' | null = null;
   private navigationItems: NavigationItems;
-  private isCollapsed: boolean = false;
+  private isCollapsed = false;
   private userProfileData: UserProfileResponse | null = null;
   private lastKvpClickTimestamp: number | null = null;
-  private lastKnownKvpCount: number = 0;
+  private lastKnownKvpCount = 0;
 
   constructor() {
     this.navigationItems = this.getNavigationItems();
     // Load last KVP click timestamp and count from localStorage
     const savedTimestamp = localStorage.getItem('lastKvpClickTimestamp');
-    this.lastKvpClickTimestamp = savedTimestamp ? parseInt(savedTimestamp, 10) : null;
+    this.lastKvpClickTimestamp = savedTimestamp !== null ? parseInt(savedTimestamp, 10) : null;
     const savedCount = localStorage.getItem('lastKnownKvpCount');
-    this.lastKnownKvpCount = savedCount ? parseInt(savedCount, 10) : 0;
+    this.lastKnownKvpCount = savedCount !== null ? parseInt(savedCount, 10) : 0;
     this.init();
   }
 
@@ -171,9 +184,9 @@ class UnifiedNavigation {
     // Normalisiere den Pfad (entferne Query-Parameter und Hash)
     const normalizedPath = path.split('?')[0].split('#')[0];
 
-    // Prüfe exakten Pfad
-    const allowedRoles = accessControlMap[normalizedPath];
-    if (allowedRoles) {
+    // Prüfe ob der Pfad in der Map existiert
+    if (normalizedPath in accessControlMap) {
+      const allowedRoles = accessControlMap[normalizedPath];
       return allowedRoles.includes(role);
     }
 
@@ -243,6 +256,8 @@ class UnifiedNavigation {
     // Fix logo navigation after DOM is ready
     setTimeout(() => {
       this.fixLogoNavigation();
+      // Initialize role switch after navigation is injected
+      this.initializeRoleSwitch();
     }, 100);
 
     // Update badge counts
@@ -251,6 +266,7 @@ class UnifiedNavigation {
       void this.updatePendingSurveys();
       void this.updateUnreadDocuments();
       void this.updateNewKvpSuggestions();
+      void this.updateUnreadCalendarEvents();
     }, 1000);
 
     // Update badges every 30 seconds
@@ -259,19 +275,20 @@ class UnifiedNavigation {
       void this.updatePendingSurveys();
       void this.updateUnreadDocuments();
       void this.updateNewKvpSuggestions();
-    }, 30000);
+      void this.updateUnreadCalendarEvents();
+    }, 600000);
 
     // Listen for BroadcastChannel messages to update navigation
     const roleChannel = new BroadcastChannel('role_switch_channel');
-    roleChannel.onmessage = (event) => {
+    roleChannel.onmessage = (event: MessageEvent<RoleSwitchMessage>) => {
       if (event.data.type === 'ROLE_SWITCHED') {
         console.info('[UnifiedNav] Received role switch notification from another tab');
 
         // Update local storage with new role data
-        if (event.data.newRole) {
+        if (event.data.newRole !== undefined) {
           localStorage.setItem('activeRole', event.data.newRole);
         }
-        if (event.data.token) {
+        if (event.data.token !== undefined) {
           localStorage.setItem('token', event.data.token);
         }
 
@@ -303,7 +320,7 @@ class UnifiedNavigation {
           }
 
           // Check if we need to redirect based on current page
-          const currentPath = window.location.pathname;
+          const currentPagePath = window.location.pathname;
           const userRole = localStorage.getItem('userRole');
           const newActiveRole = event.newValue;
 
@@ -324,7 +341,7 @@ class UnifiedNavigation {
           const targetPath = getDashboardPath(newActiveRole);
 
           // Only redirect if we're not already on the correct dashboard
-          if (targetPath && !currentPath.includes(targetPath)) {
+          if (targetPath !== '' && !currentPagePath.includes(targetPath)) {
             // Check if user has permission for the target role
             if (newActiveRole === 'root' && userRole !== 'root') {
               console.info('[UnifiedNav] User does not have root permission, skipping redirect');
@@ -349,7 +366,7 @@ class UnifiedNavigation {
   private loadUserInfo(): void {
     // User-Info aus Token oder Session laden
     const token = localStorage.getItem('token');
-    if (token) {
+    if (token !== null) {
       try {
         const payload = JSON.parse(atob(token.split('.')[1])) as TokenPayload & {
           activeRole?: string;
@@ -379,11 +396,11 @@ class UnifiedNavigation {
           localStorage.setItem('activeRole', 'employee');
         } else {
           // Not on a dashboard page, use token or localStorage
-          if (payload.activeRole) {
+          if (payload.activeRole !== undefined) {
             this.currentRole = payload.activeRole as 'root' | 'admin' | 'employee';
           } else {
             const activeRole = localStorage.getItem('activeRole');
-            if (activeRole && ['root', 'admin', 'employee'].includes(activeRole)) {
+            if (activeRole !== null && ['root', 'admin', 'employee'].includes(activeRole)) {
               this.currentRole = activeRole as 'root' | 'admin' | 'employee';
             } else {
               this.currentRole = payload.role;
@@ -423,124 +440,138 @@ class UnifiedNavigation {
   private async loadFullUserProfile(): Promise<void> {
     try {
       const token = localStorage.getItem('token');
-      if (!token || token === 'test-mode') return;
+      if (token === null || token === 'test-mode') return;
 
-      // Use cached loadUserInfo from auth module instead of making a separate call
-      console.info('[UnifiedNav] Using cached loadUserInfo');
-      const userData = (await loadUserInfoFromAuth()) as UserProfileResponse & { data?: UserProfileResponse };
-      if (userData) {
-        const user = userData.user ?? userData;
+      // Make direct API call to get full user data including company_name
+      console.info('[UnifiedNav] Fetching full user profile with company data');
 
-        // Update company info (new)
-        const companyElement = document.getElementById('sidebar-company-name');
-        if (companyElement) {
-          const companyName = userData.company_name ?? userData.data?.company_name ?? 'Firmenname';
-          companyElement.textContent = companyName;
-        }
+      // Check if we should use v1 or v2 API
+      const useV2 = window.FEATURE_FLAGS?.USE_API_V2_AUTH ?? window.FEATURE_FLAGS?.USE_API_V2_USERS;
+      console.info('[UnifiedNav] useV2 flag:', useV2); // DEBUG
 
-        const domainElement = document.getElementById('sidebar-domain');
-        if (domainElement) {
-          const subdomain = userData.subdomain ?? userData.data?.subdomain ?? 'demo';
-          domainElement.textContent = `${subdomain}.assixx.de`;
-        }
+      try {
+        if (useV2 === true) {
+          // Use v2 API - /users/me endpoint
+          console.info('[UnifiedNav] Calling apiClient.get for /users/me'); // DEBUG
+          const userData = await apiClient.get<UserProfileResponse>('/users/me');
+          console.info('[UnifiedNav] Full user data from v2 API:', userData); // DEBUG
 
-        // Update user info card with full details
-        const sidebarUserName = document.getElementById('sidebar-user-name');
-        if (sidebarUserName) {
-          const email = userData.email ?? userData.data?.email ?? user.email ?? this.currentUser?.email ?? 'User';
-          sidebarUserName.textContent = email;
-        }
+          // userData is always defined from apiClient.get, no need to check
 
-        const sidebarFullName = document.getElementById('sidebar-user-fullname');
-        if (sidebarFullName) {
-          const firstName =
-            userData.first_name ?? userData.data?.first_name ?? userData.firstName ?? ((user as User).firstName || '');
-          const lastName =
-            userData.last_name ?? userData.data?.last_name ?? userData.lastName ?? ((user as User).lastName || '');
-          if (firstName || lastName) {
-            const fullName = `${firstName} ${lastName}`.trim();
-            sidebarFullName.textContent = fullName;
+          // Update company info - check tenant and fallback properties
+          const companyElement = document.getElementById('sidebar-company-name');
+          const companyName = userData.tenant?.company_name ?? userData.companyName;
+          if (companyElement && companyName !== undefined) {
+            console.info('[UnifiedNav] Setting company name to:', companyName); // DEBUG
+            companyElement.textContent = companyName;
           }
-        }
 
-        // Birthdate removed as requested
+          const domainElement = document.getElementById('sidebar-domain');
+          const subdomain = userData.tenant?.subdomain ?? userData.subdomain;
+          if (domainElement && subdomain !== undefined) {
+            domainElement.textContent = `${subdomain}.assixx.de`;
+          }
 
-        // Update employee number
-        const sidebarEmployeeNumber = document.getElementById('sidebar-employee-number');
-        if (sidebarEmployeeNumber) {
+          // Update user info card with full details
+          const sidebarUserName = document.getElementById('sidebar-user-name');
+          if (sidebarUserName) {
+            sidebarUserName.textContent = userData.email;
+          }
+
+          const sidebarFullName = document.getElementById('sidebar-user-fullname');
+          if (sidebarFullName) {
+            const firstName = userData.firstName ?? userData.data?.firstName ?? '';
+            const lastName = userData.lastName ?? userData.data?.lastName ?? '';
+            if (firstName !== '' || lastName !== '') {
+              const fullName = `${firstName} ${lastName}`.trim();
+              sidebarFullName.textContent = fullName;
+            }
+          }
+
+          // Birthdate removed as requested
+
+          // Update employee number
+          const sidebarEmployeeNumber = document.getElementById('sidebar-employee-number');
+          interface UserDataWithEmployeeNumber extends UserProfileResponse {
+            employee_number?: string;
+            data?: {
+              employeeNumber?: string;
+              employee_number?: string;
+            };
+          }
+          const userDataTyped = userData as UserDataWithEmployeeNumber;
           const employeeNumber =
-            userData.employee_number ??
-            userData.data?.employee_number ??
             userData.employeeNumber ??
-            ((user as User).employeeNumber || '');
-          if (employeeNumber && employeeNumber !== '000001') {
-            sidebarEmployeeNumber.textContent = `Personalnummer: ${employeeNumber}`;
-          } else if (employeeNumber === '000001') {
-            sidebarEmployeeNumber.textContent = 'Personalnummer: Temporär';
-            sidebarEmployeeNumber.style.color = 'var(--warning-color)';
+            userDataTyped.employee_number ??
+            userData.data?.employeeNumber ??
+            userDataTyped.data?.employee_number;
+          if (sidebarEmployeeNumber && employeeNumber !== undefined) {
+            console.info('[UnifiedNav] Setting employee number to:', employeeNumber); // DEBUG
+            if (employeeNumber !== '000001') {
+              sidebarEmployeeNumber.textContent = `Personalnummer: ${employeeNumber}`;
+            } else {
+              sidebarEmployeeNumber.textContent = 'Personalnummer: Temporär';
+              sidebarEmployeeNumber.style.color = 'var(--warning-color)';
+            }
           }
-        }
 
-        // Update header user name with full name
-        const headerUserName = document.getElementById('user-name');
-        if (headerUserName) {
-          // Same logic as sidebar-user-fullname which works correctly
-          const firstName =
-            userData.first_name ?? userData.data?.first_name ?? userData.firstName ?? ((user as User).firstName || '');
-          const lastName =
-            userData.last_name ?? userData.data?.last_name ?? userData.lastName ?? ((user as User).lastName || '');
-          console.info('[UnifiedNav] Updating header user name:', { firstName, lastName, userData });
+          // Update header user name with full name
+          const headerUserName = document.getElementById('user-name');
+          if (headerUserName) {
+            // Same logic as sidebar-user-fullname which works correctly
+            const firstName = userData.firstName ?? userData.data?.firstName ?? '';
+            const lastName = userData.lastName ?? userData.data?.lastName ?? '';
+            console.info('[UnifiedNav] Updating header user name:', { firstName, lastName, userData });
 
-          if (firstName || lastName) {
-            const fullName = `${firstName} ${lastName}`.trim();
-            headerUserName.textContent = fullName;
-            console.info('[UnifiedNav] Set header name to:', fullName);
-          } else {
-            // Fallback auf Email oder Username wenn keine Namen vorhanden
-            const email = userData.email ?? userData.data?.email ?? user.email ?? this.currentUser?.email;
-            const username = userData.username ?? user.username ?? this.currentUser?.username;
-            headerUserName.textContent = email ?? username ?? 'User';
-            console.info('[UnifiedNav] Fallback to email/username:', email ?? username);
+            if (firstName !== '' || lastName !== '') {
+              const fullName = `${firstName} ${lastName}`.trim();
+              headerUserName.textContent = fullName;
+              console.info('[UnifiedNav] Set header name to:', fullName);
+            } else {
+              // Fallback auf Email oder Username wenn keine Namen vorhanden
+              headerUserName.textContent = userData.email;
+              console.info('[UnifiedNav] Fallback to email:', userData.email);
+            }
           }
-        }
 
-        // Update avatar if we have profile picture
-        const sidebarAvatar = document.getElementById('sidebar-user-avatar');
-        if (sidebarAvatar) {
-          const profilePic =
-            userData.profile_picture ??
-            userData.data?.profile_picture ??
-            userData.profilePicture ??
-            (user as User).profilePicture ??
-            null;
-          const firstName =
-            userData.first_name ?? userData.data?.first_name ?? userData.firstName ?? ((user as User).firstName || '');
-          const lastName =
-            userData.last_name ?? userData.data?.last_name ?? userData.lastName ?? ((user as User).lastName || '');
-          this.updateAvatarElement(sidebarAvatar, profilePic, firstName, lastName);
-        }
+          // Update avatar if we have profile picture
+          const sidebarAvatar = document.getElementById('sidebar-user-avatar');
+          if (sidebarAvatar) {
+            // API v2 uses profilePictureUrl
+            const profilePic =
+              userData.profilePictureUrl ??
+              userData.profilePicture ??
+              userData.data?.profilePicture ??
+              userData.data?.profile_picture ??
+              null;
+            const firstName = userData.firstName ?? userData.data?.firstName ?? '';
+            const lastName = userData.lastName ?? userData.data?.lastName ?? '';
+            this.updateAvatarElement(sidebarAvatar, profilePic, firstName, lastName);
+          }
 
-        // Also update header avatar
-        const headerAvatar = document.getElementById('user-avatar');
-        if (headerAvatar) {
-          const profilePic =
-            userData.profile_picture ??
-            userData.data?.profile_picture ??
-            userData.profilePicture ??
-            (user as User).profilePicture ??
-            null;
-          const firstName =
-            userData.first_name ?? userData.data?.first_name ?? userData.firstName ?? ((user as User).firstName || '');
-          const lastName =
-            userData.last_name ?? userData.data?.last_name ?? userData.lastName ?? ((user as User).lastName || '');
-          this.updateAvatarElement(headerAvatar, profilePic, firstName, lastName);
-        }
+          // Also update header avatar
+          const headerAvatar = document.getElementById('user-avatar');
+          if (headerAvatar) {
+            // API v2 uses profilePictureUrl
+            const profilePic =
+              userData.profilePictureUrl ??
+              userData.profilePicture ??
+              userData.data?.profilePicture ??
+              userData.data?.profile_picture ??
+              null;
+            const firstName = userData.firstName ?? userData.data?.firstName ?? '';
+            const lastName = userData.lastName ?? userData.data?.lastName ?? '';
+            this.updateAvatarElement(headerAvatar, profilePic, firstName, lastName);
+          }
 
-        // Store profile data
-        this.userProfileData = userData;
+          // Store profile data
+          this.userProfileData = userData;
+        }
+      } catch (error) {
+        console.error('[UnifiedNav] Error in v2 API call:', error);
       }
     } catch (error) {
-      console.error('Error loading full user profile:', error);
+      console.error('[UnifiedNav] Error loading full user profile:', error);
     }
   }
 
@@ -565,21 +596,28 @@ class UnifiedNavigation {
             {
               id: 'employees-list',
               label: 'Mitarbeiterliste',
-              url: this.getSectionUrl('employees'),
+              url: '/manage-employees',
               section: 'employees',
             },
           ],
         },
         {
+          id: 'areas',
+          icon: this.getSVGIcon('sitemap'),
+          label: 'Bereiche',
+          url: '/manage-areas',
+          section: 'areas',
+        },
+        {
           id: 'departments',
           icon: this.getSVGIcon('building'),
           label: 'Abteilungen',
-          url: '/departments',
+          url: '/manage-departments',
           children: [
             {
               id: 'departments-all',
               label: 'Alle Abteilungen',
-              url: '/departments',
+              url: '/manage-departments',
             },
           ],
         },
@@ -587,8 +625,15 @@ class UnifiedNavigation {
           id: 'teams',
           icon: this.getSVGIcon('team'),
           label: 'Teams',
-          url: this.getSectionUrl('teams'),
+          url: '/manage-teams',
           section: 'teams',
+        },
+        {
+          id: 'machines',
+          icon: this.getSVGIcon('generator'),
+          label: 'Maschinen',
+          url: '/manage-machines',
+          section: 'machines',
         },
         {
           id: 'documents',
@@ -644,6 +689,7 @@ class UnifiedNavigation {
           icon: this.getSVGIcon('calendar'),
           label: 'Kalender',
           url: '/calendar',
+          badge: 'unread-calendar-events',
         },
         {
           id: 'lean-management',
@@ -787,6 +833,7 @@ class UnifiedNavigation {
           icon: this.getSVGIcon('calendar'),
           label: 'Kalender',
           url: '/calendar',
+          badge: 'unread-calendar-events',
         },
         {
           id: 'lean-management',
@@ -877,7 +924,7 @@ class UnifiedNavigation {
           id: 'departments',
           icon: this.getSVGIcon('building'),
           label: 'Abteilungen',
-          url: '/departments',
+          url: '/manage-departments',
         },
         {
           id: 'department-groups',
@@ -959,7 +1006,7 @@ class UnifiedNavigation {
       admin:
         '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12,1L3,5V11C3,16.55 6.84,21.74 12,23C17.16,21.74 21,16.55 21,11V5L12,1M12,7C13.4,7 14.8,8.6 14.8,10V11H9.2V10C9.2,8.6 10.6,7 12,7M8.2,16V13H15.8V16H8.2Z"/></svg>',
       'user-shield':
-        '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12,1L3,5V11C3,16.55 6.84,21.74 12,23C17.16,21.74 21,16.55 21,11V5L12,1M12,5A3,3 0 0,1 15,8A3,3 0 0,1 12,11A3,3 0 0,1 9,8A3,3 0 0,1 12,5M17.13,17C15.92,18.85 14.11,20.24 12,20.92C9.89,20.24 8.08,18.85 6.87,17C6.53,16.5 6.24,16 6,15.47C6,13.82 8.71,12.47 12,12.47C15.29,12.47 18,13.79 18,15.47C17.76,16 17.47,16.5 17.13,17Z"/></svg>',
+        '<svg width="19" height="19" viewBox="0 0 24 24" fill="currentColor"><path d="M12,1L3,5V11C3,16.55 6.84,21.74 12,23C17.16,21.74 21,16.55 21,11V5L12,1M12,5A3,3 0 0,1 15,8A3,3 0 0,1 12,11A3,3 0 0,1 9,8A3,3 0 0,1 12,5M17.13,17C15.92,18.85 14.11,20.24 12,20.92C9.89,20.24 8.08,18.85 6.87,17C6.53,16.5 6.24,16 6,15.47C6,13.82 8.71,12.47 12,12.47C15.29,12.47 18,13.79 18,15.47C17.76,16 17.47,16.5 17.13,17Z"/></svg>',
       poll: '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M3,22V8H7V22H3M10,22V2H14V22H10M17,22V14H21V22H17Z"/></svg>',
       lean: '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4M12,6A6,6 0 0,0 6,12A6,6 0 0,0 12,18A6,6 0 0,0 18,12A6,6 0 0,0 12,6M12,8A4,4 0 0,1 16,12A4,4 0 0,1 12,16A4,4 0 0,1 8,12A4,4 0 0,1 12,8Z"/></svg>',
       wrench:
@@ -970,23 +1017,27 @@ class UnifiedNavigation {
       search:
         '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M15.5,14h-0.79l-0.28-0.27C15.41,12.59,16,11.11,16,9.5 C16,5.91,13.09,3,9.5,3S3,5.91,3,9.5S5.91,16,9.5,16c1.61,0,3.09-0.59,4.23-1.57l0.27,0.28v0.79l5,4.99L20.49,19L15.5,14z M9.5,14C7.01,14,5,11.99,5,9.5S7.01,5,9.5,5S14,7.01,14,9.5S11.99,14,9.5,14z"/></svg>',
       sitemap:
-        '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M3,3H9V7H3V3M15,10H21V14H15V10M15,17H21V21H15V17M13,13H11V18H11C11,19.66 9.66,21 8,21H6C4.34,21 3,19.66 3,18V10H8V12L10,10H13V7H11V3H16C17.66,3 19,4.34 19,6V8C19,9.66 17.66,11 16,11H13V13Z"/></svg>',
+        '<svg width="20" height="20" viewBox="2 0 22 22" fill="currentColor"><path d="M15.19 21C14.12 19.43 13 17.36 13 15.5C13 13.67 13.96 12 15.4 11H15V9H17V10.23C17.5 10.09 18 10 18.5 10C18.67 10 18.84 10 19 10.03V3H5V21H11V17.5H13V21H15.19M15 5H17V7H15V5M9 19H7V17H9V19M9 15H7V13H9V15M9 11H7V9H9V11M9 7H7V5H9V7M11 5H13V7H11V5M11 9H13V11H11V9M11 15V13H13V15H11M18.5 12C16.6 12 15 13.61 15 15.5C15 18.11 18.5 22 18.5 22S22 18.11 22 15.5C22 13.61 20.4 12 18.5 12M18.5 16.81C17.8 16.81 17.3 16.21 17.3 15.61C17.3 14.91 17.9 14.41 18.5 14.41S19.7 15 19.7 15.61C19.8 16.21 19.2 16.81 18.5 16.81Z"/></svg>',
       logs: '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20M8,15.5H16V17H8V15.5M8,11.5H16V13H8V11.5Z"/></svg>',
       'trash-clock':
         '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M15,16H19V18H15V16M15,8H19V10H15V8M15,12H19V14H15V12M5,12V9L9,5L13,9V13A2,2 0 0,1 11,15H7A2,2 0 0,1 5,13M9,3A1,1 0 0,0 8,4A1,1 0 0,0 9,5A1,1 0 0,0 10,4A1,1 0 0,0 9,3M2,17V20H11.67C11.24,19.09 11,18.07 11,17H2M6,8V10H8V8H6M6,11V13H8V11H6M16.5,3C13.46,3 11,5.46 11,8.5V9H13V8.5C13,6.57 14.57,5 16.5,5C18.43,5 20,6.57 20,8.5C20,10.43 18.43,12 16.5,12H16V14H16.5C19.54,14 22,11.54 22,8.5C22,5.46 19.54,3 16.5,3Z"/></svg>',
+      generator:
+        '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M7 2C5.9 2 5 2.9 5 4V6H4C2.9 6 2 6.9 2 8V20H4V21C4 21.55 4.45 22 5 22H6C6.55 22 7 21.55 7 21V20H17V21C17 21.55 17.45 22 18 22H19C19.55 22 20 21.55 20 21V20H22V8C22 6.9 21.11 6 20 6H19V4C19 2.9 18.11 2 17 2H7M14 10V8H20V10H14M14 14V12H20V14H14M7 4H17V6H7V4M7 8V12H9L6 18V14H4L7 8Z"/></svg>',
+      cog: '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12,15.5A3.5,3.5 0 0,1 8.5,12A3.5,3.5 0 0,1 12,8.5A3.5,3.5 0 0,1 15.5,12A3.5,3.5 0 0,1 12,15.5M19.43,12.97C19.47,12.65 19.5,12.33 19.5,12C19.5,11.67 19.47,11.34 19.43,11L21.54,9.37C21.73,9.22 21.78,8.95 21.66,8.73L19.66,5.27C19.54,5.05 19.27,4.96 19.05,5.05L16.56,6.05C16.04,5.66 15.5,5.32 14.87,5.07L14.5,2.42C14.46,2.18 14.25,2 14,2H10C9.75,2 9.54,2.18 9.5,2.42L9.13,5.07C8.5,5.32 7.96,5.66 7.44,6.05L4.95,5.05C4.73,4.96 4.46,5.05 4.34,5.27L2.34,8.73C2.21,8.95 2.27,9.22 2.46,9.37L4.57,11C4.53,11.34 4.5,11.67 4.5,12C4.5,12.33 4.53,12.65 4.57,12.97L2.46,14.63C2.27,14.78 2.21,15.05 2.34,15.27L4.34,18.73C4.46,18.95 4.73,19.03 4.95,18.95L7.44,17.94C7.96,18.34 8.5,18.68 9.13,18.93L9.5,21.58C9.54,21.82 9.75,22 10,22H14C14.25,22 14.46,21.82 14.5,21.58L14.87,18.93C15.5,18.67 16.04,18.34 16.56,17.94L19.05,18.95C19.27,19.03 19.54,18.95 19.66,18.73L21.66,15.27C21.78,15.05 21.73,14.78 21.54,14.63L19.43,12.97Z"/></svg>',
     };
     return icons[name] ?? icons.home;
   }
 
   private getNavigationForRole(role: 'admin' | 'employee' | 'root' | null): NavItem[] {
-    if (!role) return [];
-    return this.navigationItems[role] ?? [];
+    if (role === null) return [];
+    return this.navigationItems[role];
   }
 
   private getInitials(firstName?: string, lastName?: string): string {
-    const firstInitial = firstName ? firstName.charAt(0).toUpperCase() : '';
-    const lastInitial = lastName ? lastName.charAt(0).toUpperCase() : '';
-    return `${firstInitial}${lastInitial}` || 'U';
+    const firstInitial = firstName !== undefined && firstName !== '' ? firstName.charAt(0).toUpperCase() : '';
+    const lastInitial = lastName !== undefined && lastName !== '' ? lastName.charAt(0).toUpperCase() : '';
+    const initials = `${firstInitial}${lastInitial}`;
+    return initials !== '' ? initials : 'U';
   }
 
   private updateAvatarElement(
@@ -995,12 +1046,10 @@ class UnifiedNavigation {
     firstName?: string,
     lastName?: string,
   ): void {
-    if (!element) return;
-
     // Clear existing content
     element.innerHTML = '';
 
-    if (profilePicUrl) {
+    if (profilePicUrl !== null && profilePicUrl !== '') {
       // Show profile picture
       const img = document.createElement('img');
       img.src = profilePicUrl;
@@ -1031,12 +1080,15 @@ class UnifiedNavigation {
 
       // Re-attach event listeners after inserting HTML
       setTimeout(() => {
-        console.info('[UnifiedNav] Re-attaching event listeners for navigation-container');
-        this.attachEventListeners();
+        // Only re-attach if not already attached
+        if (!this.isEventListenerAttached) {
+          this.attachEventListeners();
+        }
         void this.updateUnreadMessages();
         void this.updatePendingSurveys();
         void this.updateUnreadDocuments();
         void this.updateNewKvpSuggestions();
+        void this.updateUnreadCalendarEvents();
       }, 100);
 
       return;
@@ -1061,10 +1113,20 @@ class UnifiedNavigation {
     const userRole = storedUserRole ?? 'employee';
 
     const userName = this.userProfileData?.username ?? this.currentUser?.username ?? 'User';
-    const firstName = this.userProfileData?.first_name ?? this.userProfileData?.firstName ?? '';
-    const lastName = this.userProfileData?.last_name ?? this.userProfileData?.lastName ?? '';
-    const displayName = firstName && lastName ? `${firstName} ${lastName}` : userName;
-    const profilePicture = this.userProfileData?.profile_picture ?? this.userProfileData?.profilePicture ?? null;
+    const firstName = this.userProfileData?.firstName ?? this.userProfileData?.first_name ?? '';
+    const lastName = this.userProfileData?.lastName ?? this.userProfileData?.last_name ?? '';
+    const displayName = firstName !== '' && lastName !== '' ? `${firstName} ${lastName}` : userName;
+    // API v2 uses profilePictureUrl
+    let profilePicture =
+      this.userProfileData?.profilePictureUrl ??
+      this.userProfileData?.profilePicture ??
+      this.userProfileData?.profile_picture ??
+      null;
+
+    // Convert empty strings to null for proper avatar display
+    if (profilePicture === '') {
+      profilePicture = null;
+    }
 
     // Determine dashboard URL - ROOT users ALWAYS go to root dashboard
     const dashboardUrl =
@@ -1079,7 +1141,8 @@ class UnifiedNavigation {
 
     // Check if user has switched roles and banner hasn't been dismissed
     const isRoleSwitched = storedUserRole !== activeRole && activeRole !== null;
-    const bannerDismissedKey = `roleSwitchBannerDismissed_${activeRole}`;
+    const bannerDismissedKey =
+      activeRole !== null ? `roleSwitchBannerDismissed_${activeRole}` : 'roleSwitchBannerDismissed_default';
     const isBannerDismissed = localStorage.getItem(bannerDismissedKey) === 'true';
 
     const warningBanner =
@@ -1116,6 +1179,7 @@ class UnifiedNavigation {
         <div class="header-content">
           <div class="header-actions">
             ${
+              // Root users always get the full dropdown with all 3 options
               userRole === 'root'
                 ? `
               <!-- Role Switch Custom Dropdown for Root -->
@@ -1155,21 +1219,47 @@ class UnifiedNavigation {
             }
 
             <div id="user-info">
-              <div id="user-avatar" class="user-avatar ${profilePicture ? '' : 'avatar-initials'}">${
-                profilePicture
+              <div id="user-avatar" class="user-avatar ${profilePicture !== null && profilePicture !== '' ? '' : 'avatar-initials'}">${
+                profilePicture !== null && profilePicture !== ''
                   ? `<img src="${profilePicture}" alt="Avatar" style="width: 100%; height: 100%; object-fit: cover; border-radius: inherit;" />`
                   : this.getInitials(firstName, lastName)
               }</div>
               <span id="user-name">${this.escapeHtml(displayName)}</span>
             </div>
 
-            <button id="logout-btn" class="btn-logout btn btn-secondary">
+            <button id="logout-btn" class="btn-logout">
               <i class="fas fa-sign-out-alt"></i>
-
             </button>
           </div>
         </div>
       </header>
+
+      <!-- Logout Confirmation Modal -->
+      <div id="logoutModal" class="modal" style="display: none;">
+        <div class="modal-overlay"></div>
+        <div class="logout-modal">
+          <div class="modal-header">
+            <h2>Abmeldung bestätigen</h2>
+          </div>
+          <div class="modal-body">
+            <div class="logout-info">
+              <i class="fas fa-info-circle"></i>
+              <span>Alle ungespeicherten Änderungen gehen verloren.</span>
+            </div>
+            <p class="logout-message">Möchten Sie sich wirklich abmelden?</p>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-secondary" id="cancelLogout">
+              <i class="fas fa-times"></i>
+              Abbrechen
+            </button>
+            <button class="btn btn-danger" id="confirmLogout">
+              <i class="fas fa-sign-out-alt"></i>
+              Abmelden
+            </button>
+          </div>
+        </div>
+      </div>
 
       ${warningBanner}
 
@@ -1181,7 +1271,7 @@ class UnifiedNavigation {
   }
 
   private escapeHtml(text: string): string {
-    const map: { [key: string]: string } = {
+    const map: Record<string, string> = {
       '&': '&amp;',
       '<': '&lt;',
       '>': '&gt;',
@@ -1261,25 +1351,27 @@ class UnifiedNavigation {
         `;
   }
 
-  private createMenuItem(item: NavItem, isActive: boolean = false): string {
+  private createMenuItem(item: NavItem, isActive = false): string {
     const activeClass = isActive ? 'active' : '';
     const hasChildren = item.children && item.children.length > 0;
-    const hasSubmenu = item.hasSubmenu && item.submenu && item.submenu.length > 0;
+    const hasSubmenu = item.hasSubmenu === true && item.submenu !== undefined && item.submenu.length > 0;
     // Remove onclick handler - use normal navigation instead
     const clickHandler = '';
 
     // Badge für ungelesene Nachrichten oder offene Umfragen
     let badgeHtml = '';
     if (item.badge === 'unread-messages') {
-      badgeHtml = `<span class="nav-badge" id="chat-unread-badge" style="display: none; position: absolute; top: 8px; right: 10px; background: #ff4444; color: white; font-size: 0.7rem; padding: 2px 6px; border-radius: 10px; font-weight: bold; min-width: 18px; text-align: center;">0</span>`;
+      badgeHtml = `<span class="nav-badge" id="chat-unread-badge" style="display: none; position: absolute; top: 8px; right: 10px; background: linear-gradient(0deg, rgba(243, 33, 33, 0.71), rgba(243, 33, 33, 0.76)); font-size: 0.7rem; padding: 2px 6px; border-radius: 50px; font-weight: bold; min-width: 30px; text-align: center;">0</span>`;
     } else if (item.badge === 'pending-surveys') {
       badgeHtml = `<span class="nav-badge" id="surveys-pending-badge" style="display: none; position: absolute; top: 8px; right: 15px; background: rgba(255, 152, 0, 0.15); backdrop-filter: blur(10px); border: 1px solid rgba(255, 152, 0, 0.3); color: #ff9800; font-size: 0.75rem; padding: 3px 8px; border-radius: 12px; font-weight: 600; min-width: 20px; text-align: center;">0</span>`;
     } else if (item.badge === 'unread-documents') {
-      badgeHtml = `<span class="nav-badge" id="documents-unread-badge" style="display: none; position: absolute; top: 8px; right: 10px; background: #2196f3; color: white; font-size: 0.7rem; padding: 2px 6px; border-radius: 10px; font-weight: bold; min-width: 18px; text-align: center;">0</span>`;
+      badgeHtml = `<span class="nav-badge" id="documents-unread-badge" style="display: none; position: absolute; top: 8px; right: 10px; background: #2196f3; color: #fff; font-size: 0.7rem; padding: 2px 6px; border-radius: 10px; font-weight: bold; min-width: 18px; text-align: center;">0</span>`;
     } else if (item.badge === 'new-kvp-suggestions') {
-      badgeHtml = `<span class="nav-badge" id="kvp-badge" style="display: none; position: absolute; top: 8px; right: 10px; background: #4caf50; color: white; font-size: 0.7rem; padding: 2px 6px; border-radius: 10px; font-weight: bold; min-width: 18px; text-align: center;">0</span>`;
+      badgeHtml = `<span class="nav-badge" id="kvp-badge" style="display: none; position: absolute; top: 8px; right: 10px; background: #4caf50; color: #fff; font-size: 0.7rem; padding: 2px 6px; border-radius: 10px; font-weight: bold; min-width: 18px; text-align: center;">0</span>`;
     } else if (item.badge === 'lean-management-parent') {
       badgeHtml = `<span class="nav-badge" id="lean-management-badge" style="display: none; position: absolute; top: 8px; right: 40px; background: rgba(255, 152, 0, 0.15); backdrop-filter: blur(10px); border: 1px solid rgba(255, 152, 0, 0.3); color: #ff9800; font-size: 0.75rem; padding: 3px 8px; border-radius: 12px; font-weight: 600; min-width: 20px; text-align: center;">0</span>`;
+    } else if (item.badge === 'unread-calendar-events') {
+      badgeHtml = `<span class="nav-badge" id="calendar-unread-badge" style="display: none; position: absolute; top: 8px; right: 10px; background: linear-gradient(0deg, rgba(243, 33, 33, 0.71), rgba(243, 33, 33, 0.76)); font-size: 0.7rem; padding: 2px 6px; border-radius: 50px; font-weight: bold; min-width: 30px; text-align: center;">0</span>`;
     }
 
     // If has submenu, create a dropdown
@@ -1290,17 +1382,17 @@ class UnifiedNavigation {
               .map((child) => {
                 // Support both badgeId and badge properties
                 let childBadgeHtml = '';
-                if (child.badgeId) {
-                  childBadgeHtml = `<span class="nav-badge" id="${child.badgeId}" style="display: none; position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: #ff5722; color: white; font-size: 0.7rem; padding: 2px 6px; border-radius: 10px; font-weight: bold; min-width: 18px; text-align: center;">0</span>`;
+                if (child.badgeId !== undefined) {
+                  childBadgeHtml = `<span class="nav-badge" id="${child.badgeId}" style="display: none; position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: #ff5722; color: #fff; font-size: 0.7rem; padding: 2px 6px; border-radius: 10px; font-weight: bold; min-width: 18px; text-align: center;">0</span>`;
                 } else if (child.badge === 'pending-surveys') {
                   childBadgeHtml = `<span class="nav-badge" id="surveys-pending-badge" style="display: none; position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: rgba(255, 152, 0, 0.15); backdrop-filter: blur(10px); border: 1px solid rgba(255, 152, 0, 0.3); color: #ff9800; font-size: 0.75rem; padding: 3px 8px; border-radius: 12px; font-weight: 600; min-width: 20px; text-align: center;">0</span>`;
                 } else if (child.badge === 'new-kvp-suggestions') {
-                  childBadgeHtml = `<span class="nav-badge" id="kvp-badge" style="display: none; position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: #4caf50; color: white; font-size: 0.7rem; padding: 2px 6px; border-radius: 10px; font-weight: bold; min-width: 18px; text-align: center;">0</span>`;
+                  childBadgeHtml = `<span class="nav-badge" id="kvp-badge" style="display: none; position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: #4caf50; color: #fff; font-size: 0.7rem; padding: 2px 6px; border-radius: 10px; font-weight: bold; min-width: 18px; text-align: center;">0</span>`;
                 }
 
                 return `
               <li class="submenu-item" style="position: relative;">
-                <a href="${child.url}" class="submenu-link" data-nav-id="${child.id}">
+                <a href="${child.url ?? '#'}" class="submenu-link" data-nav-id="${child.id}">
                   <span class="submenu-label">${child.label}</span>
                   ${childBadgeHtml}
                 </a>
@@ -1313,7 +1405,7 @@ class UnifiedNavigation {
       return `
         <li class="sidebar-item has-submenu ${activeClass}" style="position: relative;">
           <a href="#" class="sidebar-link" onclick="toggleSubmenu(event, '${item.id}')" data-nav-id="${item.id}">
-            <span class="icon">${item.icon}</span>
+            <span class="icon">${item.icon ?? ''}</span>
             <span class="label">${item.label}</span>
             <span class="nav-indicator"></span>
             <span class="submenu-arrow">
@@ -1331,14 +1423,14 @@ class UnifiedNavigation {
     }
 
     // If has children, create a dropdown (old style)
-    if (hasChildren) {
+    if (hasChildren === true) {
       const submenuItems =
         item.children && item.children.length > 0
           ? item.children
               .map(
                 (child) => `
         <li class="submenu-item">
-          <a href="${child.url}" class="submenu-link" data-nav-id="${child.id}">
+          <a href="${child.url ?? '#'}" class="submenu-link" data-nav-id="${child.id}">
             <span class="submenu-label">${child.label}</span>
           </a>
         </li>
@@ -1350,7 +1442,7 @@ class UnifiedNavigation {
       return `
         <li class="sidebar-item has-submenu ${activeClass}" style="position: relative;">
           <a href="#" class="sidebar-link" onclick="toggleSubmenu(event, '${item.id}')" data-nav-id="${item.id}">
-            <span class="icon">${item.icon}</span>
+            <span class="icon">${item.icon ?? ''}</span>
             <span class="label">${item.label}</span>
             <span class="nav-indicator"></span>
             <span class="submenu-arrow">
@@ -1369,8 +1461,8 @@ class UnifiedNavigation {
 
     return `
             <li class="sidebar-item ${activeClass}" style="position: relative;">
-                <a href="${item.url}" class="sidebar-link" ${clickHandler} data-nav-id="${item.id}">
-                    <span class="icon">${item.icon}</span>
+                <a href="${item.url ?? '#'}" class="sidebar-link" ${clickHandler} data-nav-id="${item.id}">
+                    <span class="icon">${item.icon ?? ''}</span>
                     <span class="label">${item.label}</span>
                     <span class="nav-indicator"></span>
                     ${badgeHtml}
@@ -1381,23 +1473,34 @@ class UnifiedNavigation {
 
   // Removed unused method getUserInitials
 
+  // Store the click handlers as bound methods so we can remove them
+  private documentClickHandler?: (e: MouseEvent) => void;
+  private dropdownClickHandler?: (e: Event) => void;
+  private isEventListenerAttached = false;
+
   private attachEventListeners(): void {
-    // Navigation Link Clicks
-    document.addEventListener('click', (e: MouseEvent) => {
-      const navLink = (e.target as HTMLElement).closest('.sidebar-link:not([onclick])') as HTMLElement;
+    // Remove existing listener if present
+    if (this.documentClickHandler) {
+      document.removeEventListener('click', this.documentClickHandler);
+      this.isEventListenerAttached = false;
+    }
+
+    // Create and store the new handler
+    this.documentClickHandler = (e: MouseEvent) => {
+      const navLink = (e.target as HTMLElement).closest('.sidebar-link:not([onclick])');
       if (navLink) {
-        this.handleNavigationClick(navLink, e);
+        this.handleNavigationClick(navLink as HTMLElement, e);
       }
 
       // Submenu Link Clicks
-      const submenuLink = (e.target as HTMLElement).closest('.submenu-link') as HTMLElement;
+      const submenuLink = (e.target as HTMLElement).closest('.submenu-link');
       if (submenuLink) {
         // Store the parent submenu state
         const parentSubmenu = submenuLink.closest('.submenu');
         const parentItem = parentSubmenu?.closest('.sidebar-item');
         if (parentItem) {
           const parentId = parentItem.querySelector('.sidebar-link')?.getAttribute('data-nav-id');
-          if (parentId) {
+          if (parentId !== null && parentId !== undefined) {
             localStorage.setItem('openSubmenu', parentId);
           }
         }
@@ -1412,16 +1515,34 @@ class UnifiedNavigation {
       // Logout Button Click - Check both button and its children
       const target = e.target as HTMLElement;
       const logoutBtn = target.closest('#logout-btn');
+
       if (logoutBtn) {
         e.preventDefault();
         e.stopPropagation(); // Stop event from bubbling
-        this.handleLogout().catch((error) => {
+        this.handleLogout().catch((error: unknown) => {
           console.error('Logout error:', error);
           // Fallback: redirect to login even if logout fails
           window.location.href = '/login';
         });
       }
-    });
+    };
+
+    // Add the new listener
+    document.addEventListener('click', this.documentClickHandler);
+    this.isEventListenerAttached = true;
+
+    // Add direct listener as fallback for logout button
+    const logoutBtnCheck = document.getElementById('logout-btn');
+    if (logoutBtnCheck) {
+      logoutBtnCheck.onclick = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        this.handleLogout().catch((error: unknown) => {
+          console.error('Logout error from direct listener:', error);
+          window.location.href = '/login';
+        });
+      };
+    }
 
     // Sidebar Toggle
     this.attachSidebarToggle();
@@ -1446,12 +1567,10 @@ class UnifiedNavigation {
 
     // Try to find the navigation sidebar specifically
     const navContainer = document.getElementById('navigation-container');
-    const sidebar = navContainer
-      ? (navContainer.querySelector('.sidebar') as HTMLElement)
-      : (document.querySelector('.sidebar') as HTMLElement);
-    const mainContent = document.querySelector('.main-content') as HTMLElement;
-    const chatMain = document.querySelector('.chat-main') as HTMLElement;
-    const chatSidebar = document.querySelector('.chat-sidebar') as HTMLElement;
+    const sidebar = navContainer ? navContainer.querySelector('.sidebar') : document.querySelector('.sidebar');
+    const mainContent = document.querySelector('.main-content');
+    const chatMain = document.querySelector('.chat-main');
+    const chatSidebar = document.querySelector('.chat-sidebar');
 
     console.info('[UnifiedNav] Toggle button:', toggleBtn);
     console.info('[UnifiedNav] Sidebar:', sidebar);
@@ -1471,10 +1590,10 @@ class UnifiedNavigation {
       mainContent?.classList.add('sidebar-collapsed');
       chatMain?.classList.add('sidebar-collapsed');
       chatSidebar?.classList.add('sidebar-collapsed');
-      sidebar.style.setProperty('width', '68px', 'important');
+      (sidebar as HTMLElement).style.setProperty('width', '68px', 'important');
       this.updateToggleIcon();
     } else {
-      sidebar.style.setProperty('width', '280px', 'important');
+      (sidebar as HTMLElement).style.setProperty('width', '280px', 'important');
     }
 
     // Toggle click handler
@@ -1497,21 +1616,21 @@ class UnifiedNavigation {
       // Set width directly as inline style to override any CSS
       console.info('[UnifiedNav] Setting width for collapsed state:', newState);
       if (newState) {
-        sidebar.style.width = '70px';
-        sidebar.style.setProperty('width', '70px', 'important');
+        (sidebar as HTMLElement).style.width = '70px';
+        (sidebar as HTMLElement).style.setProperty('width', '70px', 'important');
         console.info('[UnifiedNav] Set width to 70px, actual style:', sidebar.getAttribute('style'));
 
         // Check if there's a CSS rule overriding
         const computedStyle = window.getComputedStyle(sidebar);
         console.info('[UnifiedNav] Width source:', computedStyle.getPropertyPriority('width'));
       } else {
-        sidebar.style.width = '280px';
-        sidebar.style.setProperty('width', '280px', 'important');
+        (sidebar as HTMLElement).style.width = '280px';
+        (sidebar as HTMLElement).style.setProperty('width', '280px', 'important');
         console.info('[UnifiedNav] Set width to 280px, actual style:', sidebar.getAttribute('style'));
       }
 
       // Force browser to recalculate styles
-      void sidebar.offsetWidth;
+      void (sidebar as HTMLElement).offsetWidth;
 
       // Save state
       localStorage.setItem('sidebarCollapsed', newState.toString());
@@ -1521,8 +1640,8 @@ class UnifiedNavigation {
       this.updateToggleIcon();
 
       // Update logo based on collapsed state
-      const headerLogo = document.getElementById('header-logo') as HTMLImageElement;
-      if (headerLogo) {
+      const headerLogo = document.getElementById('header-logo') as HTMLImageElement | null;
+      if (headerLogo !== null) {
         headerLogo.src = newState ? '/assets/images/logo_collapsed.png' : '/assets/images/logo.png';
       }
 
@@ -1533,10 +1652,10 @@ class UnifiedNavigation {
 
     // Hover effect for toggle button
     toggleBtn.addEventListener('mouseenter', () => {
-      const isCollapsed = sidebar.classList.contains('collapsed');
+      const isSidebarCollapsed = sidebar.classList.contains('collapsed');
       const iconPath = toggleBtn.querySelector('.toggle-icon-path');
       if (iconPath) {
-        if (isCollapsed) {
+        if (isSidebarCollapsed) {
           // Show menu-close icon (menu with arrow right) when collapsed
           iconPath.setAttribute(
             'd',
@@ -1578,8 +1697,9 @@ class UnifiedNavigation {
 
     const navItems = sidebar.querySelectorAll('.sidebar-link');
     navItems.forEach((item) => {
-      const label = item.querySelector('.label')?.textContent;
-      if (label) {
+      const labelElement = item.querySelector('.label');
+      if (labelElement !== null && labelElement.textContent !== '') {
+        const label = labelElement.textContent;
         item.setAttribute('title', '');
 
         // Show tooltip only when sidebar is collapsed
@@ -1595,32 +1715,81 @@ class UnifiedNavigation {
   }
 
   private async handleLogout(): Promise<void> {
-    // Use the logout function from auth module which logs the action
-    const { logout } = await import('../auth.js');
-    await logout();
+    // Show logout confirmation modal instead of direct logout
+    const modal = document.getElementById('logoutModal');
+
+    if (modal) {
+      // Ensure modal is visible with proper z-index and positioning
+      modal.style.display = 'block';
+      modal.style.position = 'fixed';
+      modal.style.zIndex = '999999';
+      modal.style.top = '0';
+      modal.style.left = '0';
+      modal.style.width = '100%';
+      modal.style.height = '100%';
+      modal.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+
+      // Also add active class if needed for CSS animations
+      modal.classList.add('active');
+
+      // Setup modal event handlers
+      const confirmBtn = document.getElementById('confirmLogout');
+      const cancelBtn = document.getElementById('cancelLogout');
+      const overlay = modal.querySelector('.modal-overlay');
+
+      const closeModal = () => {
+        modal.style.display = 'none';
+        modal.classList.remove('active');
+      };
+
+      const performLogout = async () => {
+        // Use the logout function from auth module which logs the action
+        const { logout } = await import('../auth.js');
+        await logout();
+      };
+
+      // Add event listeners (remove old ones first to avoid duplicates)
+      if (confirmBtn) {
+        const newConfirmBtn = confirmBtn.cloneNode(true) as HTMLElement;
+        confirmBtn.parentNode?.replaceChild(newConfirmBtn, confirmBtn);
+        newConfirmBtn.addEventListener('click', () => {
+          void performLogout();
+        });
+      }
+
+      if (cancelBtn) {
+        const newCancelBtn = cancelBtn.cloneNode(true) as HTMLElement;
+        cancelBtn.parentNode?.replaceChild(newCancelBtn, cancelBtn);
+        newCancelBtn.addEventListener('click', closeModal);
+      }
+
+      if (overlay) {
+        const newOverlay = overlay.cloneNode(true) as HTMLElement;
+        overlay.parentNode?.replaceChild(newOverlay, overlay);
+        newOverlay.addEventListener('click', closeModal);
+      }
+    } else {
+      // Fallback to direct logout if modal not found
+      const { logout } = await import('../auth.js');
+      await logout();
+    }
   }
 
   private initializeRoleSwitch(): void {
     const userRole = localStorage.getItem('userRole');
+    // const activeRole = localStorage.getItem('activeRole'); // Currently not used in this method
 
-    // Handle root users with custom dropdown
+    // Simplified: Root users always get root handlers, admin users always get admin handlers
+    // The dropdown HTML already shows the correct options based on userRole
     if (userRole === 'root') {
       const dropdownDisplay = document.getElementById('roleSwitchDisplay');
       const dropdownOptions = document.getElementById('roleSwitchDropdown');
 
-      // Check if already initialized
-      if (dropdownDisplay?.hasAttribute('data-initialized')) {
-        console.info('[UnifiedNav] Role switch dropdown already initialized, skipping');
-        return;
-      }
-
-      console.info('[UnifiedNav] Looking for dropdown elements for root user');
-      console.info('[UnifiedNav] dropdownDisplay:', dropdownDisplay);
-      console.info('[UnifiedNav] dropdownOptions:', dropdownOptions);
-
       if (dropdownDisplay && dropdownOptions) {
-        console.info('[UnifiedNav] Initializing role switch dropdown for root user');
-        console.info('[UnifiedNav] Dropdown elements found:', { dropdownDisplay, dropdownOptions });
+        // Check if already initialized
+        if (dropdownDisplay.hasAttribute('data-initialized')) {
+          return;
+        }
 
         // Mark as initialized
         dropdownDisplay.setAttribute('data-initialized', 'true');
@@ -1660,8 +1829,9 @@ class UnifiedNavigation {
 
               // Update display text
               const displayText = dropdownDisplay.querySelector('span');
-              if (displayText) {
-                displayText.textContent = (e.target as HTMLElement).textContent ?? '';
+              if (displayText && e.target instanceof HTMLElement) {
+                // After instanceof check, textContent is always string
+                displayText.textContent = e.target.textContent;
               }
 
               // Close dropdown
@@ -1669,8 +1839,8 @@ class UnifiedNavigation {
               dropdownOptions.classList.remove('active');
 
               // Update hidden input
-              const hiddenInput = document.getElementById('role-switch-value') as HTMLInputElement;
-              if (hiddenInput) {
+              const hiddenInput = document.getElementById('role-switch-value') as HTMLInputElement | null;
+              if (hiddenInput !== null) {
                 hiddenInput.value = selectedRole;
               }
 
@@ -1683,33 +1853,35 @@ class UnifiedNavigation {
         });
 
         // Close dropdown when clicking outside
-        document.addEventListener('click', (e) => {
+        // Remove existing handler if present
+        if (this.dropdownClickHandler) {
+          document.removeEventListener('click', this.dropdownClickHandler);
+        }
+
+        // Create and store new handler
+        this.dropdownClickHandler = (e: Event) => {
           // Don't close if clicking on the dropdown itself
           if (!dropdownDisplay.contains(e.target as Node) && !dropdownOptions.contains(e.target as Node)) {
             dropdownDisplay.classList.remove('active');
             dropdownOptions.classList.remove('active');
           }
-        });
+        };
+
+        // Add the new listener
+        document.addEventListener('click', this.dropdownClickHandler);
       }
     }
 
-    // Handle admin users with dropdown (same as root)
-    if (userRole === 'admin') {
+    // Handle admin users (but not root users, they already have their handler)
+    else if (userRole === 'admin') {
       const dropdownDisplay = document.getElementById('roleSwitchDisplay');
       const dropdownOptions = document.getElementById('roleSwitchDropdown');
 
-      // Check if already initialized
-      if (dropdownDisplay?.hasAttribute('data-initialized')) {
-        console.info('[UnifiedNav] Role switch dropdown already initialized, skipping');
-        return;
-      }
-
-      console.info('[UnifiedNav] Looking for dropdown elements for admin user');
-      console.info('[UnifiedNav] dropdownDisplay:', dropdownDisplay);
-      console.info('[UnifiedNav] dropdownOptions:', dropdownOptions);
-
       if (dropdownDisplay && dropdownOptions) {
-        console.info('[UnifiedNav] Initializing role switch dropdown for admin user');
+        // Check if already initialized
+        if (dropdownDisplay.hasAttribute('data-initialized')) {
+          return;
+        }
 
         // Mark as initialized
         dropdownDisplay.setAttribute('data-initialized', 'true');
@@ -1739,82 +1911,18 @@ class UnifiedNavigation {
           option.addEventListener('click', (e) => {
             void (async () => {
               e.stopPropagation();
-              const selectedRole = (option as HTMLElement).dataset.value;
-              if (selectedRole) {
-                console.info('[UnifiedNav] Admin switching to role:', selectedRole);
+              const roleValue = (option as HTMLElement).dataset.value;
+              if (roleValue === 'root' || roleValue === 'admin' || roleValue === 'employee') {
+                const selectedRole = roleValue;
+                console.info('[UnifiedNav] Admin view switching to role:', selectedRole);
 
                 // Close dropdown
                 dropdownDisplay.classList.remove('active');
                 dropdownOptions.classList.remove('active');
 
-                // Switch role for admin (different API endpoints than root)
-                if (selectedRole === 'admin' || selectedRole === 'employee') {
-                  // Admin uses different API endpoints
-                  const token = localStorage.getItem('token');
-                  const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? '';
-                  // const currentRole = localStorage.getItem('activeRole') ?? 'admin';
-
-                  // Determine endpoint based on target role
-                  const endpoint =
-                    selectedRole === 'employee' ? '/api/role-switch/to-employee' : '/api/role-switch/to-admin';
-
-                  try {
-                    const response = await fetch(endpoint, {
-                      method: 'POST',
-                      headers: {
-                        Authorization: `Bearer ${token}`,
-                        'Content-Type': 'application/json',
-                        'X-CSRF-Token': csrfToken,
-                      },
-                      credentials: 'include',
-                    });
-
-                    if (!response.ok) {
-                      throw new Error('Rollenwechsel fehlgeschlagen');
-                    }
-
-                    const data = await response.json();
-
-                    // Update token and storage
-                    localStorage.setItem('token', data.token);
-                    localStorage.setItem('activeRole', data.user.activeRole);
-
-                    // Also update sessionStorage for compatibility
-                    if (data.user.activeRole === 'employee') {
-                      sessionStorage.setItem('roleSwitch', 'employee');
-                    } else {
-                      sessionStorage.removeItem('roleSwitch');
-                    }
-
-                    // Clear role switch banner dismissal states
-                    ['admin', 'employee'].forEach((role) => {
-                      localStorage.removeItem(`roleSwitchBannerDismissed_${role}`);
-                    });
-
-                    // Show success message with toast
-                    const message =
-                      selectedRole === 'employee'
-                        ? 'Wechsel zur Mitarbeiter-Ansicht...'
-                        : 'Wechsel zur Admin-Ansicht...';
-
-                    // Create and show toast notification
-                    this.showToast(message, 'success');
-
-                    // Redirect to appropriate dashboard
-                    setTimeout(() => {
-                      if (data.user.activeRole === 'admin') {
-                        window.location.href = '/admin-dashboard';
-                      } else {
-                        window.location.href = '/employee-dashboard';
-                      }
-                    }, 1000);
-                  } catch (error) {
-                    console.error('Role switch error:', error);
-                    // Re-enable dropdown on error
-                    dropdownDisplay.style.pointerEvents = '';
-                    dropdownDisplay.style.opacity = '';
-                  }
-                }
+                // Admin users can only switch between admin and employee
+                console.info('[UnifiedNav] Admin user, calling switchRoleForAdmin');
+                await switchRoleForAdmin(selectedRole as 'admin' | 'employee');
               }
             })();
           });
@@ -1837,7 +1945,7 @@ class UnifiedNavigation {
 
     // Store active navigation
     const navId = link.dataset.navId;
-    if (navId) {
+    if (navId !== undefined && navId !== '') {
       localStorage.setItem('activeNavigation', navId);
 
       // If user clicked on documents, mark all as read
@@ -1847,7 +1955,9 @@ class UnifiedNavigation {
 
       // If admin/root clicked on KVP, reset the badge
       if (navId === 'kvp' && (this.currentRole === 'admin' || this.currentRole === 'root')) {
-        this.resetKvpBadge().catch((error) => console.error('Error resetting KVP badge:', error));
+        this.resetKvpBadge().catch((error: unknown) => {
+          console.error('Error resetting KVP badge:', error);
+        });
       }
     }
 
@@ -1875,13 +1985,13 @@ class UnifiedNavigation {
 
     // If on dashboard page
     if (isMainDashboard) {
-      if (currentHash && currentHash !== 'dashboard') {
+      if (currentHash !== '' && currentHash !== 'dashboard') {
         // Use hash to determine active section
         const hashLink = document.querySelector(`[data-nav-id="${currentHash}"]`);
         if (hashLink) {
           hashLink.closest('.sidebar-item')?.classList.add('active');
         }
-      } else if (!activeNav || activeNav === 'dashboard') {
+      } else if (activeNav === null || activeNav === '' || activeNav === 'dashboard') {
         // Default to overview only if no hash and no stored nav
         const dashboardLink = document.querySelector('[data-nav-id="dashboard"]');
         if (dashboardLink) {
@@ -1890,21 +2000,27 @@ class UnifiedNavigation {
         // Clear any stored navigation to prevent last selected from being active
         localStorage.removeItem('activeNavigation');
       }
-    } else if (activeNav && activeNav !== 'dashboard') {
-      // Only use stored navigation if it's not the dashboard
-      const activeLink = document.querySelector(`[data-nav-id="${activeNav}"]`);
-      if (activeLink) {
-        activeLink.closest('.sidebar-item')?.classList.add('active');
-      }
     } else {
-      // For other pages, auto-detect or default to dashboard
+      // For non-dashboard pages, first try to auto-detect based on URL
       const detected = this.autoDetectActivePage(currentPath);
+
       if (!detected) {
-        // If no match found, default to dashboard
-        const dashboardLink = document.querySelector('[data-nav-id="dashboard"]');
-        if (dashboardLink) {
-          dashboardLink.closest('.sidebar-item')?.classList.add('active');
+        // Only if auto-detect failed, check localStorage
+        if (activeNav !== null && activeNav !== '' && activeNav !== 'dashboard') {
+          const activeLink = document.querySelector(`[data-nav-id="${activeNav}"]`);
+          if (activeLink) {
+            activeLink.closest('.sidebar-item')?.classList.add('active');
+          }
+        } else {
+          // If no match found and no stored nav, default to dashboard
+          const dashboardLink = document.querySelector('[data-nav-id="dashboard"]');
+          if (dashboardLink) {
+            dashboardLink.closest('.sidebar-item')?.classList.add('active');
+          }
         }
+      } else {
+        // Clear localStorage if we successfully auto-detected
+        localStorage.removeItem('activeNavigation');
       }
     }
 
@@ -1937,12 +2053,15 @@ class UnifiedNavigation {
 
     // Check if we're on a dashboard page with a section that has a submenu
     const isDashboard = currentPath.includes('dashboard');
-    if (isDashboard && section) {
+    if (isDashboard && section !== null && section !== '') {
       // Check if this section corresponds to a menu item with submenu
       const menuItems = this.getNavigationForRole(this.currentRole);
       const menuItem = menuItems.find((item) => item.id === section);
 
-      if (menuItem && (menuItem.hasSubmenu || menuItem.children)) {
+      if (
+        menuItem !== undefined &&
+        (menuItem.hasSubmenu === true || (menuItem.children !== undefined && menuItem.children.length > 0))
+      ) {
         // Open the submenu for this section
         const submenu = document.getElementById(`submenu-${section}`);
         const parentItem = submenu?.closest('.sidebar-item.has-submenu');
@@ -1988,17 +2107,17 @@ class UnifiedNavigation {
             }
 
             // Find and open the parent submenu
-            const submenu = link.closest('.submenu') as HTMLElement;
+            const submenu = link.closest('.submenu');
             const parentItem = submenu?.closest('.sidebar-item.has-submenu');
 
             if (submenu && parentItem) {
-              submenu.style.display = 'block';
+              (submenu as HTMLElement).style.display = 'block';
               parentItem.classList.add('open');
               parentItem.classList.add('active');
 
               // Store the open submenu state
               const parentId = parentItem.querySelector('.sidebar-link')?.getAttribute('data-nav-id');
-              if (parentId) {
+              if (parentId !== null && parentId !== undefined && parentId !== '') {
                 localStorage.setItem('openSubmenu', parentId);
               }
             }
@@ -2017,7 +2136,7 @@ class UnifiedNavigation {
 
     // Restore previously open submenu if we're still on the same parent section
     const storedSubmenu = localStorage.getItem('openSubmenu');
-    if (storedSubmenu && !foundActiveSubmenu) {
+    if (storedSubmenu !== null && storedSubmenu !== '' && !foundActiveSubmenu) {
       const submenu = document.getElementById(`submenu-${storedSubmenu}`);
       const parentItem = submenu?.closest('.sidebar-item.has-submenu');
 
@@ -2033,8 +2152,39 @@ class UnifiedNavigation {
 
   private autoDetectActivePage(currentPath: string): boolean {
     const menuItems = this.getNavigationForRole(this.currentRole);
+
+    // First check children/submenu items for exact match
+    for (const item of menuItems) {
+      if (item.children !== undefined && item.children.length > 0) {
+        for (const child of item.children) {
+          if (child.url !== undefined && child.url !== '' && !child.url.startsWith('#')) {
+            // For absolute URLs like /manage-employees, check if current path matches
+            if (child.url.startsWith('/') && currentPath === child.url) {
+              // Mark the parent item as active
+              const parentLink = document.querySelector(`[data-nav-id="${item.id}"]`);
+              if (parentLink) {
+                parentLink.closest('.sidebar-item')?.classList.add('active');
+                // Also mark the child as active if it has a link element
+                const childLink = document.querySelector(`[data-nav-id="${child.id}"]`);
+                if (childLink) {
+                  childLink.closest('.submenu-item')?.classList.add('active');
+                }
+                return true;
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // Then check top-level items
     const matchingItem = menuItems.find((item) => {
-      if (!item.url || item.url.startsWith('#')) return false;
+      if (item.url === undefined || item.url === '' || item.url.startsWith('#')) return false;
+      // For absolute URLs, do exact match
+      if (item.url.startsWith('/')) {
+        return currentPath === item.url;
+      }
+      // For relative URLs or query params, use includes
       return currentPath.includes(item.url.replace('/', ''));
     });
 
@@ -2077,12 +2227,16 @@ class UnifiedNavigation {
 
       // Re-attach event listeners after DOM update
       setTimeout(() => {
-        this.attachEventListeners();
+        // Only re-attach if not already attached
+        if (!this.isEventListenerAttached) {
+          this.attachEventListeners();
+        }
         this.updateActiveNavigation();
         void this.updateUnreadMessages();
         void this.updatePendingSurveys();
         void this.updateUnreadDocuments();
         void this.updateNewKvpSuggestions();
+        void this.updateUnreadCalendarEvents();
 
         // Restore sidebar state
         const isCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
@@ -2110,26 +2264,29 @@ class UnifiedNavigation {
   public async updateUnreadMessages(): Promise<void> {
     try {
       const token = localStorage.getItem('token');
-      if (!token || token === 'test-mode') return;
+      if (token === null || token === '' || token === 'test-mode') return;
 
-      const response = await fetch('/api/chat/unread-count', {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
+      // Use v2 API endpoint with camelCase response
+      // Note: apiClient automatically adds /api/v2 prefix for v2 endpoints
+      const data = await apiClient.get<{
+        totalUnread: number;
+        conversations: {
+          conversationId: number;
+          conversationName: string | null;
+          unreadCount: number;
+          lastMessageTime: Date;
+        }[];
+      }>('/chat/unread-count');
 
-      if (response.ok) {
-        const data: UnreadCountResponse = await response.json();
-        const badge = document.getElementById('chat-unread-badge');
-        if (badge) {
-          const count = data.unreadCount ?? 0;
-          if (count > 0) {
-            badge.textContent = count > 99 ? '99+' : count.toString();
-            badge.style.display = 'inline-block';
-          } else {
-            badge.style.display = 'none';
-          }
+      const badge = document.getElementById('chat-unread-badge');
+      if (badge) {
+        // v2 API uses totalUnread (camelCase)
+        const count = data.totalUnread;
+        if (count > 0) {
+          badge.textContent = count > 99 ? '99+' : count.toString();
+          badge.style.display = 'inline-block';
+        } else {
+          badge.style.display = 'none';
         }
       }
     } catch (error) {
@@ -2137,11 +2294,43 @@ class UnifiedNavigation {
     }
   }
 
+  // Update Calendar unread events count (Events mit ausstehender Statusanfrage)
+  public async updateUnreadCalendarEvents(): Promise<void> {
+    try {
+      const token = localStorage.getItem('token');
+      if (token === null || token === '' || token === 'test-mode') return;
+
+      const data = await apiClient.get<{
+        totalUnread: number;
+        eventsRequiringResponse: {
+          id: number;
+          title: string;
+          startTime: string;
+          requiresResponse: boolean;
+        }[];
+      }>('/calendar/unread-events');
+
+      const badge = document.getElementById('calendar-unread-badge');
+      if (badge) {
+        // Nur Events mit Statusanfrage zählen
+        const count = data.totalUnread;
+        if (count > 0) {
+          badge.textContent = count > 99 ? '99+' : count.toString();
+          badge.style.display = 'inline-block';
+        } else {
+          badge.style.display = 'none';
+        }
+      }
+    } catch (error) {
+      console.error('Error updating unread calendar events:', error);
+    }
+  }
+
   // Update KVP new suggestions count (for admin/root only)
   public async updateNewKvpSuggestions(): Promise<void> {
     try {
       const token = localStorage.getItem('token');
-      if (!token || token === 'test-mode') return;
+      if (token === null || token === '' || token === 'test-mode') return;
 
       // Only show badge for admin/root users
       if (this.currentRole !== 'admin' && this.currentRole !== 'root') {
@@ -2150,39 +2339,37 @@ class UnifiedNavigation {
         return;
       }
 
-      const response = await fetch('/api/kvp/stats', {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
+      const data = await apiClient.get<{
+        totalSuggestions: number;
+        newSuggestions: number;
+        inProgress: number;
+        implemented: number;
+        rejected: number;
+        avgSavings: number | null;
+      }>('/kvp/dashboard/stats');
+      const badge = document.getElementById('kvp-badge');
+      if (badge !== null) {
+        const currentCount = data.newSuggestions;
 
-      if (response.ok) {
-        const data = await response.json();
-        const badge = document.getElementById('kvp-badge');
-        if (badge && data.company) {
-          const currentCount = data.company.byStatus?.new ?? 0;
+        // Check if user has clicked on KVP before
+        const hasClickedKvp = this.lastKvpClickTimestamp !== null;
 
-          // Check if user has clicked on KVP before
-          const hasClickedKvp = this.lastKvpClickTimestamp !== null;
+        // Only show badge if:
+        // 1. There are new suggestions AND
+        // 2. Either the user has never clicked on KVP OR the count has increased since last click
+        if (currentCount > 0 && (!hasClickedKvp || currentCount > this.lastKnownKvpCount)) {
+          badge.textContent = currentCount > 99 ? '99+' : currentCount.toString();
+          badge.style.display = 'inline-block';
+          console.info('[UnifiedNav] KVP badge shown - count:', currentCount, 'lastKnown:', this.lastKnownKvpCount);
+        } else {
+          badge.style.display = 'none';
+          console.info('[UnifiedNav] KVP badge hidden - count:', currentCount, 'lastKnown:', this.lastKnownKvpCount);
+        }
 
-          // Only show badge if:
-          // 1. There are new suggestions AND
-          // 2. Either the user has never clicked on KVP OR the count has increased since last click
-          if (currentCount > 0 && (!hasClickedKvp || currentCount > this.lastKnownKvpCount)) {
-            badge.textContent = currentCount > 99 ? '99+' : currentCount.toString();
-            badge.style.display = 'inline-block';
-            console.info('[UnifiedNav] KVP badge shown - count:', currentCount, 'lastKnown:', this.lastKnownKvpCount);
-          } else {
-            badge.style.display = 'none';
-            console.info('[UnifiedNav] KVP badge hidden - count:', currentCount, 'lastKnown:', this.lastKnownKvpCount);
-          }
-
-          // Update the last known count if it has changed
-          if (currentCount !== this.lastKnownKvpCount && !hasClickedKvp) {
-            this.lastKnownKvpCount = currentCount;
-            localStorage.setItem('lastKnownKvpCount', currentCount.toString());
-          }
+        // Update the last known count if it has changed
+        if (currentCount !== this.lastKnownKvpCount && !hasClickedKvp) {
+          this.lastKnownKvpCount = currentCount;
+          localStorage.setItem('lastKnownKvpCount', currentCount.toString());
         }
       }
     } catch (error) {
@@ -2194,8 +2381,8 @@ class UnifiedNavigation {
   public async updatePendingSurveys(): Promise<void> {
     try {
       const token = localStorage.getItem('token');
-      console.info('[UnifiedNav] updatePendingSurveys - Token exists:', !!token);
-      if (!token || token === 'test-mode') return;
+      console.info('[UnifiedNav] updatePendingSurveys - Token exists:', token !== null && token !== '');
+      if (token === null || token === '' || token === 'test-mode') return;
 
       // Nur für Employees
       const role = localStorage.getItem('userRole');
@@ -2208,57 +2395,37 @@ class UnifiedNavigation {
       console.info('[UnifiedNav] updatePendingSurveys - Fetching pending count...');
       // Auf allen Seiten ausführen, da Badge in Sidebar immer sichtbar ist
 
-      const response = await fetch('/api/surveys/pending-count', {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
+      const data = await apiClient.get<{ pendingCount: number }>('/surveys/pending-count');
+      console.info('[UnifiedNav] updatePendingSurveys - Pending count data:', data);
+      const badge = document.getElementById('surveys-pending-badge');
+      const parentBadge = document.getElementById('lean-management-badge');
+      console.info('[UnifiedNav] updatePendingSurveys - Badge element found:', !!badge);
+      console.info('[UnifiedNav] updatePendingSurveys - Parent badge element found:', !!parentBadge);
 
-      console.info('[UnifiedNav] updatePendingSurveys - Response status:', response.status);
+      const count = data.pendingCount;
 
-      if (response.ok) {
-        const data: PendingCountResponse = await response.json();
-        console.info('[UnifiedNav] updatePendingSurveys - Pending count data:', data);
-        const badge = document.getElementById('surveys-pending-badge');
-        const parentBadge = document.getElementById('lean-management-badge');
-        console.info('[UnifiedNav] updatePendingSurveys - Badge element found:', !!badge);
-        console.info('[UnifiedNav] updatePendingSurveys - Parent badge element found:', !!parentBadge);
-
-        const count = data.pendingCount ?? 0;
-
-        // Update child badge (in submenu)
-        if (badge) {
-          if (count > 0) {
-            badge.textContent = count > 99 ? '99+' : count.toString();
-            badge.style.display = 'inline-block';
-            console.info('[UnifiedNav] updatePendingSurveys - Badge shown with count:', count);
-          } else {
-            badge.style.display = 'none';
-            console.info('[UnifiedNav] updatePendingSurveys - Badge hidden, count is 0');
-          }
-        }
-
-        // Update parent badge (on LEAN-Management)
-        if (parentBadge) {
-          if (count > 0) {
-            parentBadge.textContent = count > 99 ? '99+' : count.toString();
-            parentBadge.style.display = 'inline-block';
-            console.info('[UnifiedNav] updatePendingSurveys - Parent badge shown with count:', count);
-          } else {
-            parentBadge.style.display = 'none';
-            console.info('[UnifiedNav] updatePendingSurveys - Parent badge hidden, count is 0');
-          }
-        }
-      } else if (response.status === 404) {
-        console.info('[UnifiedNav] updatePendingSurveys - 404 error, endpoint not found');
-        // API endpoint doesn't exist yet - hide badge silently
-        const badge = document.getElementById('surveys-pending-badge');
-        if (badge) {
+      // Update child badge (in submenu)
+      if (badge) {
+        if (count > 0) {
+          badge.textContent = count > 99 ? '99+' : count.toString();
+          badge.style.display = 'inline-block';
+          console.info('[UnifiedNav] updatePendingSurveys - Badge shown with count:', count);
+        } else {
           badge.style.display = 'none';
+          console.info('[UnifiedNav] updatePendingSurveys - Badge hidden, count is 0');
         }
-      } else {
-        console.info('[UnifiedNav] updatePendingSurveys - Error response:', response.status, response.statusText);
+      }
+
+      // Update parent badge (on LEAN-Management)
+      if (parentBadge) {
+        if (count > 0) {
+          parentBadge.textContent = count > 99 ? '99+' : count.toString();
+          parentBadge.style.display = 'inline-block';
+          console.info('[UnifiedNav] updatePendingSurveys - Parent badge shown with count:', count);
+        } else {
+          parentBadge.style.display = 'none';
+          console.info('[UnifiedNav] updatePendingSurveys - Parent badge hidden, count is 0');
+        }
       }
     } catch (error) {
       console.error('[UnifiedNav] updatePendingSurveys - Exception:', error);
@@ -2274,25 +2441,21 @@ class UnifiedNavigation {
   public async updateUnreadDocuments(): Promise<void> {
     try {
       const token = localStorage.getItem('token');
-      if (!token || token === 'test-mode') return;
+      if (token === null || token === '' || token === 'test-mode') return;
 
       // Für Employees und Admins
       const role = localStorage.getItem('userRole') ?? this.currentRole;
       if (role !== 'employee' && role !== 'admin') return;
 
       // Fetch all documents with unread status
-      const response = await fetch('/api/v2/documents', {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
+      const result = await apiClient.get<{
+        documents: Document[];
+        pagination?: { total: number; page: number; perPage: number };
+      }>('/documents');
+      // Backend returns {documents: Document[], pagination: {...}}
+      const documents = result.documents;
 
-      if (response.ok) {
-        const result = await response.json();
-        // Backend returns {data: {documents: Document[], pagination: {...}}}
-        const documents = result.data?.documents ?? result.documents ?? [];
-
+      if (documents.length > 0) {
         // Count unread documents by category
         const unreadCounts = {
           company: 0,
@@ -2310,13 +2473,13 @@ class UnifiedNavigation {
         }
 
         documents.forEach((doc: DocumentResponse) => {
-          if (!doc.is_read) {
+          if (doc.is_read === false) {
             unreadCounts.total++;
 
             // Special case for payroll documents
             if (doc.category === 'salary') {
               unreadCounts.payroll++;
-            } else if (doc.scope) {
+            } else if (doc.scope !== undefined) {
               // Count by scope
               unreadCounts[doc.scope as keyof typeof unreadCounts]++;
             }
@@ -2362,22 +2525,14 @@ class UnifiedNavigation {
   private async markAllDocumentsAsRead(): Promise<void> {
     try {
       const token = localStorage.getItem('token');
-      if (!token || token === 'test-mode') return;
+      if (token === null || token === '' || token === 'test-mode') return;
 
-      const response = await fetch('/api/employee/documents/mark-all-read', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
+      await apiClient.post('/documents/mark-all-read');
 
-      if (response.ok) {
-        // Hide the badge immediately
-        const badge = document.getElementById('documents-unread-badge');
-        if (badge) {
-          badge.style.display = 'none';
-        }
+      // Hide the badge immediately
+      const badge = document.getElementById('documents-unread-badge');
+      if (badge) {
+        badge.style.display = 'none';
       }
     } catch (error) {
       console.error('Error marking documents as read:', error);
@@ -2401,22 +2556,19 @@ class UnifiedNavigation {
     // Get the current count from the API to save as baseline
     try {
       const token = localStorage.getItem('token');
-      if (token && token !== 'test-mode') {
-        const response = await fetch('/api/kvp/stats', {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          if (data.company) {
-            this.lastKnownKvpCount = data.company.byStatus?.new ?? 0;
-            localStorage.setItem('lastKnownKvpCount', this.lastKnownKvpCount.toString());
-            console.info('[UnifiedNav] KVP baseline count saved:', this.lastKnownKvpCount);
-          }
-        }
+      if (token !== null && token !== '' && token !== 'test-mode') {
+        const data = await apiClient.get<{
+          totalSuggestions: number;
+          newSuggestions: number;
+          inProgress: number;
+          implemented: number;
+          rejected: number;
+          avgSavings: number | null;
+        }>('/kvp/dashboard/stats');
+        // data is always returned from apiClient.get
+        this.lastKnownKvpCount = data.newSuggestions;
+        localStorage.setItem('lastKnownKvpCount', this.lastKnownKvpCount.toString());
+        console.info('[UnifiedNav] KVP baseline count saved:', this.lastKnownKvpCount);
       }
     } catch (error) {
       console.error('Error fetching KVP count for baseline:', error);
@@ -2539,41 +2691,38 @@ class UnifiedNavigation {
 
     try {
       const token = localStorage.getItem('token');
-      if (!token || token === 'test-mode') return;
+      if (token === null || token === '' || token === 'test-mode') return;
 
-      const response = await fetch('/api/root/storage-info', {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
+      const data = await apiClient.get<{
+        used: number;
+        total: number;
+        percentage: number;
+        plan: string;
+        breakdown?: { documents: number; attachments: number; logs: number; backups: number };
+      }>('/root/storage');
+      const { used, total, percentage } = data;
 
-      if (response.ok) {
-        const data = await response.json();
-        const { used, total, percentage } = data;
+      // Update UI
+      const usedElement = document.getElementById('storage-used');
+      const totalElement = document.getElementById('storage-total');
+      const progressBar = document.getElementById('storage-progress-bar');
+      const percentageElement = document.getElementById('storage-percentage');
 
-        // Update UI
-        const usedElement = document.getElementById('storage-used');
-        const totalElement = document.getElementById('storage-total');
-        const progressBar = document.getElementById('storage-progress-bar') as HTMLElement;
-        const percentageElement = document.getElementById('storage-percentage');
+      if (usedElement) usedElement.textContent = this.formatBytes(used);
+      if (totalElement) totalElement.textContent = this.formatBytes(total);
+      if (progressBar) {
+        progressBar.style.width = `${percentage}%`;
 
-        if (usedElement) usedElement.textContent = this.formatBytes(used);
-        if (totalElement) totalElement.textContent = this.formatBytes(total);
-        if (progressBar) {
-          progressBar.style.width = `${percentage}%`;
-
-          // Farbe basierend auf Nutzung
-          if (percentage >= 90) {
-            progressBar.style.backgroundColor = 'var(--error-color)';
-          } else if (percentage >= 70) {
-            progressBar.style.backgroundColor = 'var(--warning-color)';
-          } else {
-            progressBar.style.backgroundColor = 'var(--success-color)';
-          }
+        // Farbe basierend auf Nutzung
+        if (percentage >= 90) {
+          progressBar.style.backgroundColor = 'var(--error-color)';
+        } else if (percentage >= 70) {
+          progressBar.style.backgroundColor = 'var(--warning-color)';
+        } else {
+          progressBar.style.backgroundColor = 'var(--success-color)';
         }
-        if (percentageElement) percentageElement.textContent = `${percentage}% belegt`;
       }
+      if (percentageElement) percentageElement.textContent = `${percentage}% belegt`;
     } catch (error) {
       console.error('Error updating storage info:', error);
     }
@@ -2588,65 +2737,8 @@ class UnifiedNavigation {
     return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
   }
 
-  // Toast notification helper
-  private showToast(message: string, type: 'success' | 'error' = 'success'): void {
-    // Create toast element
-    const toast = document.createElement('div');
-    toast.className = `toast toast-${type}`;
-    toast.textContent = message;
-    toast.style.cssText = `
-      position: fixed;
-      top: 80px;
-      right: 20px;
-      padding: 16px 24px;
-      background: ${type === 'success' ? 'rgba(76, 175, 80, 0.1)' : 'rgba(244, 67, 54, 0.1)'};
-      border: 1px solid ${type === 'success' ? 'rgba(76, 175, 80, 0.2)' : 'rgba(244, 67, 54, 0.2)'};
-      color: ${type === 'success' ? 'rgba(76, 175, 80, 0.9)' : 'rgba(244, 67, 54, 0.9)'};
-      border-radius: 12px;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-      z-index: 10000;
-      font-size: 14px;
-      font-weight: 500;
-      backdrop-filter: blur(10px);
-      animation: slideInRight 0.3s ease-out;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    `;
-
-    // Add icon
-    const icon = document.createElement('span');
-    icon.innerHTML =
-      type === 'success'
-        ? '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>'
-        : '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>';
-    toast.prepend(icon);
-
-    // Add animation styles if not already added
-    if (!document.getElementById('toast-animations')) {
-      const style = document.createElement('style');
-      style.id = 'toast-animations';
-      style.textContent = `
-        @keyframes slideInRight {
-          from { transform: translateX(100%); opacity: 0; }
-          to { transform: translateX(0); opacity: 1; }
-        }
-        @keyframes slideOutRight {
-          from { transform: translateX(0); opacity: 1; }
-          to { transform: translateX(100%); opacity: 0; }
-        }
-      `;
-      document.head.appendChild(style);
-    }
-
-    document.body.appendChild(toast);
-
-    // Remove after delay
-    setTimeout(() => {
-      toast.style.animation = 'slideOutRight 0.3s ease-in';
-      setTimeout(() => toast.remove(), 300);
-    }, 3000);
-  }
+  // Toast notification helper - Removed as it was unused
+  // If needed in future, consider using the showToast from role-switch.ts instead
 }
 
 // CSS Styles für die Unified Navigation
@@ -2719,7 +2811,7 @@ const unifiedNavigationCSS = `
         display: flex;
         align-items: center;
         justify-content: center;
-        color: white;
+        color: #fff;
         font-weight: 600;
         font-size: 0.9rem;
     }
@@ -2791,7 +2883,7 @@ const unifiedNavigationCSS = `
         top: 60px;
         overflow-y: auto;
         overflow-x: hidden;
-        /* transition: all .3s ease; */
+        transition: width .3s ease;
     }
 
     /* Scrollbar Styling */
@@ -2878,11 +2970,11 @@ const unifiedNavigationCSS = `
     }
 
     .sidebar-title:hover .pin-head {
-        opacity: 0;
+        opacity: 0%;
     }
 
     .sidebar-title:hover .pin-needle {
-        opacity: 1;
+        opacity: 100%;
         top: -18px;
     }
 
@@ -2930,7 +3022,7 @@ const unifiedNavigationCSS = `
         top: -10px;
         left: 50%;
         transform: translateX(-50%);
-        opacity: 0;
+        opacity: 0%;
         /* transition: all 0.3s ease; */
         z-index: 2;
     }
@@ -2996,7 +3088,7 @@ const unifiedNavigationCSS = `
         border-radius: 8px;
         cursor: pointer;
         /* transition: all 0.3s ease; */
-        color: white;
+        color: #fff;
         margin-right: 15px;
         margin-left: -6px;
     }
@@ -3007,7 +3099,7 @@ const unifiedNavigationCSS = `
     }
 
     .sidebar-toggle:hover .toggle-icon {
-        opacity: 0.8;
+        opacity: 0%.8;
     }
 
     .toggle-icon {
@@ -3039,7 +3131,7 @@ const unifiedNavigationCSS = `
     }
 
     .sidebar.collapsed .title-text {
-        opacity: 0;
+        opacity: 0%;
         width: 0;
         display: none;
     }
@@ -3088,6 +3180,8 @@ const unifiedNavigationCSS = `
     /* Collapsed state: Hover/Active NUR auf Icon */
     .sidebar.collapsed .sidebar-link {
         background: transparent;
+        font-size: 14px !important; /* Gleiche font-size wie normal state */
+        line-height: 20px !important; /* Gleiche line-height wie normal state */
     }
 
     /* Wichtig: overflow visible für collapsed sidebar damit der Kreis größer werden kann */
@@ -3107,7 +3201,7 @@ const unifiedNavigationCSS = `
     .sidebar.collapsed .sidebar-item.active .sidebar-link .icon::before {
         content: '';
         position: absolute;
-        inset: -9px;
+        inset: -8px;
         background: linear-gradient(0deg, rgba(33, 150, 243, 0.15), rgba(33, 150, 243, 0.08));
         border-radius: 50%;
         z-index: -1;
@@ -3122,7 +3216,7 @@ const unifiedNavigationCSS = `
     .sidebar.collapsed .sidebar-item:not(.active) .sidebar-link:hover .icon::before {
         content: '';
         position: absolute;
-        inset: -12px;
+        inset: -8px;
         background: rgba(33, 150, 243, 0.1);
         border-radius: 50%;
         z-index: -1;
@@ -3146,7 +3240,7 @@ const unifiedNavigationCSS = `
     }
 
     .sidebar.collapsed .sidebar-menu {
-        margin-top: 71.9px;
+        margin-top: 73px; /* Ganze Zahl statt 71.9px - vermeidet Sub-pixel Rounding */
     }
 
 
@@ -3188,19 +3282,19 @@ const unifiedNavigationCSS = `
         margin-left: 10px;
         padding: 8px 12px;
         background: rgba(0, 0, 0, 0.9);
-        color: white;
+        color: #fff;
         border-radius: 6px;
         font-size: 14px;
         white-space: nowrap;
         z-index: 1000;
         pointer-events: none;
-        opacity: 0;
+        opacity: 0%;
         /*animation: tooltipFadeIn 0.3s ease forwards;*/
     }
 
     @keyframes tooltipFadeIn {
         to {
-            opacity: 1;
+            opacity: 100%;
         }
     }
 
@@ -3235,7 +3329,6 @@ const unifiedNavigationCSS = `
         padding: 14px 10px 15px 40px;
         background: rgba(255, 255, 255, 0.02);
         backdrop-filter: blur(20px) saturate(180%);
-        -webkit-backdrop-filter: blur(20px) saturate(180%);
         /*border: 1px solid rgba(115, 115, 115, 0.36);*/
         border-radius: var(--radius-md);
         margin-bottom: 20px;
@@ -3261,7 +3354,7 @@ const unifiedNavigationCSS = `
         background:
             radial-gradient(circle at 20% 80%, rgba(255, 255, 255, 0.06) 0%, transparent 50%),
             radial-gradient(circle at 80% 20%, rgba(255, 255, 255, 0.06) 0%, transparent 50%);
-        opacity: 1;
+        opacity: 100%;
         z-index: 0;
     }
 
@@ -3305,7 +3398,6 @@ const unifiedNavigationCSS = `
         border: none !important;
         flex-shrink: 0 !important;
         /* transition: all 0.3s ease; */
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
         margin-left: 0px;
         overflow: hidden;
         position: relative;
@@ -3319,14 +3411,14 @@ const unifiedNavigationCSS = `
 
     /* Avatar with initials */
     .avatar-initials {
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-        background: linear-gradient(135deg, #2196F3, #42a5f5) !important;
-        color: white !important;
-        font-weight: 600 !important;
-        font-size: 0.85rem !important;
-        text-transform: uppercase !important;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #2196F3, #42a5f5);
+        color: #fff;
+        font-weight: 600;
+        font-size: 0.85rem;
+        text-transform: uppercase;
     }
 
     /* Avatar padding when sidebar is collapsed */
@@ -3338,7 +3430,7 @@ const unifiedNavigationCSS = `
     .sidebar.collapsed #sidebar-user-avatar,
     .sidebar.collapsed .user-avatar,
     .sidebar.collapsed .user-info-card .user-avatar {
-        margin-left: -14px !important;
+        margin-left: -13.5px !important;
     }
 
     .user-info-card:hover .user-avatar {
@@ -3360,6 +3452,8 @@ const unifiedNavigationCSS = `
         align-items: baseline;
         gap: 6px;
         margin-bottom: 4px;
+        white-space: nowrap;
+        text-overflow: ellipsis;
     }
 
     .company-name {
@@ -3371,16 +3465,17 @@ const unifiedNavigationCSS = `
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
-        text-shadow: 0 0 20px rgba(33, 150, 243, 0.5);
-        white-space: normal;
         margin-top: 8px;
+        white-space: nowrap;
+        text-overflow: ellipsis;
     }
 
     .company-domain {
         font-size: 12px;
         color: rgba(255, 255, 255, 0.5);
-        white-space: nowrap;
         overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
         text-overflow: ellipsis;
     }
 
@@ -3484,8 +3579,8 @@ const unifiedNavigationCSS = `
         border-radius: 18px;
         position: relative;
         overflow: hidden;
-        border: 1px solid transparent;
-        font-size: 0.9rem;
+        font-size: 14px; /* Explizite px statt rem für konsistenz */
+        line-height: 20px; /* Explizite line-height */
         margin-bottom: 6px;
         height: 36px;
         box-sizing: border-box;
@@ -3494,7 +3589,6 @@ const unifiedNavigationCSS = `
     /* Hover/Active nur wenn NICHT collapsed */
     .sidebar:not(.collapsed) .sidebar-link:hover {
         background: rgba(33, 150, 243, 0.1);
-        color: var(--primary-color);
     }
 
     .sidebar:not(.collapsed) .sidebar-item.active .sidebar-link {
@@ -3552,7 +3646,7 @@ const unifiedNavigationCSS = `
         to {
             width: 200px;
             height: 200px;
-            opacity: 0;
+            opacity: 0%;
         }
     }
 
@@ -3569,7 +3663,7 @@ const unifiedNavigationCSS = `
     .submenu-arrow {
         margin-left: auto;
         /* transition: transform 0.3s ease; */
-        opacity: 0.6;
+        opacity: 0%.6;
     }
 
     .sidebar-item.has-submenu.open .submenu-arrow {
@@ -3630,33 +3724,34 @@ const unifiedNavigationCSS = `
         padding: var(--spacing-xl);
         background: var(--background-primary);
         min-height: calc(100vh - 60px);
+        transition: margin-left .3s ease;
     }
 
     /* Storage Widget - Glassmorphismus Style */
     .storage-widget {
-        /*position: sticky;*/
+        margin-top: 50px
+        /*position: sticky;
         bottom: 0;
         margin: var(--spacing-md);
-        /*margin-top: auto;*/
+        margin-top: auto;
         margin-top: 40px;
         background: rgba(255, 255, 255, 0.03);
         backdrop-filter: blur(20px) saturate(180%);
-        -webkit-backdrop-filter: blur(20px) saturate(180%);
         border: 1px solid hsla(0,0%,100%,.1);
         border-radius: var(--radius-md);
         padding: var(--spacing-md);
         box-shadow:
             0 8px 32px rgba(0, 0, 0, 0.4),
             inset 0 1px 0 rgba(255, 255, 255, 0.1);
-        /* transition: all 0.3s ease; */
+        transition: all 0.3s ease; */
     }
 
     .storage-widget:hover {
-        background: rgba(255, 255, 255, 0.05);
+        /*background: rgba(255, 255, 255, 0.05);
         transform: translateY(-2px);
         box-shadow:
             0 10px 40px rgba(33, 150, 243, 0.3),
-            inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            inset 0 1px 0 rgba(255, 255, 255, 0.1);*/
     }
 
     .storage-header {
@@ -3745,7 +3840,7 @@ const unifiedNavigationCSS = `
         width: 100%;
         padding: var(--spacing-sm) var(--spacing-md);
         background: linear-gradient(135deg, var(--primary-color), var(--primary-hover));
-        color: white;
+        color: #fff;
         border: none;
         border-radius: var(--radius-sm);
         font-size: 13px;
@@ -3862,35 +3957,30 @@ if (document.readyState === 'loading') {
 
 // Setup periodic updates
 const setupPeriodicUpdates = () => {
+  // window.unifiedNav is always set before this is called (via setTimeout)
+  const nav = window.unifiedNav;
+
   // Ungelesene Nachrichten beim Start und periodisch aktualisieren
-  if (window.unifiedNav && typeof window.unifiedNav.updateUnreadMessages === 'function') {
-    void window.unifiedNav.updateUnreadMessages();
+  if (typeof nav.updateUnreadMessages === 'function') {
+    void nav.updateUnreadMessages();
     setInterval(() => {
-      void window.unifiedNav?.updateUnreadMessages();
+      void nav.updateUnreadMessages();
     }, 30000); // Alle 30 Sekunden
   }
 
   // Offene Umfragen beim Start und periodisch aktualisieren
-  if (
-    window.unifiedNav &&
-    'updatePendingSurveys' in window.unifiedNav &&
-    typeof window.unifiedNav.updatePendingSurveys === 'function'
-  ) {
-    void window.unifiedNav.updatePendingSurveys();
+  if ('updatePendingSurveys' in nav && typeof nav.updatePendingSurveys === 'function') {
+    void nav.updatePendingSurveys();
     setInterval(() => {
-      void window.unifiedNav?.updatePendingSurveys?.();
+      void nav.updatePendingSurveys();
     }, 30000); // Alle 30 Sekunden
   }
 
   // Storage-Informationen für Root User beim Start und periodisch aktualisieren
-  if (
-    window.unifiedNav &&
-    'updateStorageInfo' in window.unifiedNav &&
-    typeof window.unifiedNav.updateStorageInfo === 'function'
-  ) {
-    void window.unifiedNav.updateStorageInfo();
+  if ('updateStorageInfo' in nav && typeof nav.updateStorageInfo === 'function') {
+    void nav.updateStorageInfo();
     setInterval(() => {
-      void window.unifiedNav?.updateStorageInfo?.();
+      void nav.updateStorageInfo();
     }, 60000); // Alle 60 Sekunden
   }
 };
@@ -3917,16 +4007,16 @@ window.dismissRoleSwitchBanner = function () {
 
     // Save dismissal state
     const activeRole = localStorage.getItem('activeRole');
-    if (activeRole) {
+    if (activeRole !== null && activeRole !== '') {
       const bannerDismissedKey = `roleSwitchBannerDismissed_${activeRole}`;
       localStorage.setItem(bannerDismissedKey, 'true');
     }
 
     // Reset sidebar position
-    const sidebar = document.querySelector('.sidebar') as HTMLElement;
+    const sidebar = document.querySelector('.sidebar');
     if (sidebar) {
-      sidebar.style.top = '';
-      sidebar.style.height = '';
+      (sidebar as HTMLElement).style.top = '';
+      (sidebar as HTMLElement).style.height = '';
     }
   }
 };

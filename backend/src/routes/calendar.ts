@@ -16,7 +16,7 @@ import { security } from "../middleware/security";
 import { apiLimiter } from "../middleware/security-enhanced";
 import { createValidation } from "../middleware/validation";
 import calendarModel, { EventUpdateData } from "../models/calendar";
-import { AuthenticatedRequest } from "../types/request.types";
+import type { AuthenticatedRequest } from "../types/request.types";
 import { successResponse, errorResponse } from "../types/response.types";
 import { getErrorMessage } from "../utils/errorHandler";
 import { typed } from "../utils/routeHandlers";
@@ -39,7 +39,9 @@ interface CalendarEventBody {
   end_time: string;
   all_day?: boolean;
   org_level?: string;
-  org_id?: number | string;
+  org_id?: number | string; // Deprecated, use department_id and team_id
+  department_id?: number | string;
+  team_id?: number | string;
   reminder_time?: number;
   color?: string;
   recurrence_rule?: string;
@@ -71,7 +73,7 @@ interface CalendarQueryOptions {
 
 // Helper function to get tenant ID from user object
 function getTenantId(user: AuthenticatedRequest["user"]): number {
-  return user.tenant_id ?? 1;
+  return user.tenant_id;
 }
 
 // Validation schemas
@@ -140,7 +142,7 @@ const canManageEvent = typed.params<{ id: string }>(async (req, res, next) => {
 
     // Get user role, department, and team info for permissions
     const userInfo = {
-      role: req.user.role ?? null,
+      role: req.user.role || null,
       departmentId: req.user.department_id ?? null,
       teamId: null as number | null,
     };
@@ -179,7 +181,7 @@ const canManageEvent = typed.params<{ id: string }>(async (req, res, next) => {
     // Add event to request for later use
     (req as CalendarEventRequest).event = event;
     next();
-  } catch (error) {
+  } catch (error: unknown) {
     console.error(
       "Error in canManageEvent middleware:",
       getErrorMessage(error),
@@ -311,23 +313,41 @@ router.get(
       const tenantId = getTenantId(req.user);
 
       const options: CalendarQueryOptions = {
-        status: (req.query.status as "active" | "cancelled") || "active",
+        status:
+          req.query.status !== undefined
+            ? (req.query.status as "active" | "cancelled")
+            : "active",
         filter:
-          (req.query.filter as
-            | "all"
-            | "company"
-            | "department"
-            | "team"
-            | "personal") || "all",
-        search: (req.query.search as string) ?? "",
+          req.query.filter !== undefined
+            ? (req.query.filter as
+                | "all"
+                | "company"
+                | "department"
+                | "team"
+                | "personal")
+            : "all",
+        search:
+          req.query.search !== undefined ? (req.query.search as string) : "",
         start_date: (req.query.start ?? req.query.start_date) as
           | string
           | undefined,
         end_date: (req.query.end ?? req.query.end_date) as string | undefined,
-        page: parseInt((req.query.page as string) ?? "1", 10),
-        limit: parseInt((req.query.limit as string) ?? "50", 10),
-        sortBy: (req.query.sortBy as string) ?? "start_date",
-        sortDir: (req.query.sortDir as "ASC" | "DESC") || "ASC",
+        page:
+          req.query.page !== undefined
+            ? parseInt(req.query.page as string, 10)
+            : 1,
+        limit:
+          req.query.limit !== undefined
+            ? parseInt(req.query.limit as string, 10)
+            : 50,
+        sortBy:
+          req.query.sortBy !== undefined
+            ? (req.query.sortBy as string)
+            : "start_date",
+        sortDir:
+          req.query.sortDir !== undefined
+            ? (req.query.sortDir as "ASC" | "DESC")
+            : "ASC",
       };
 
       const result = await calendarModel.getAllEvents(
@@ -337,7 +357,7 @@ router.get(
       );
 
       res.json(successResponse(result));
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("Error in GET /api/calendar:", getErrorMessage(error));
       res
         .status(500)
@@ -363,8 +383,8 @@ router.get(
     try {
       const tenantId = getTenantId(req.user);
 
-      const days = parseInt((req.query.days as string) ?? "7", 10);
-      const limit = parseInt((req.query.limit as string) ?? "5", 10);
+      const days = parseInt((req.query.days as string) || "7", 10);
+      const limit = parseInt((req.query.limit as string) || "5", 10);
 
       const events = await calendarModel.getDashboardEvents(
         tenantId,
@@ -374,7 +394,7 @@ router.get(
       );
 
       res.json(successResponse(events));
-    } catch (error) {
+    } catch (error: unknown) {
       console.error(
         "Error in GET /api/calendar/dashboard:",
         getErrorMessage(error),
@@ -414,7 +434,7 @@ router.get(
       }
 
       res.json(successResponse(event));
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("Error in GET /api/calendar/:id:", getErrorMessage(error));
       res
         .status(500)
@@ -465,7 +485,7 @@ router.post(
       res
         .status(201)
         .json(successResponse(event, "Event erfolgreich erstellt"));
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("Error in POST /api/calendar:", getErrorMessage(error));
       res
         .status(500)
@@ -498,13 +518,21 @@ router.put(
           | "team"
           | "personal"
           | undefined,
-        org_id: req.body.org_id
-          ? parseInt(String(req.body.org_id), 10)
-          : undefined,
+        department_id:
+          req.body.department_id != null && req.body.department_id !== ""
+            ? parseInt(String(req.body.department_id), 10)
+            : undefined,
+        team_id:
+          req.body.team_id != null && req.body.team_id !== ""
+            ? parseInt(String(req.body.team_id), 10)
+            : undefined,
         reminder_time: req.body.reminder_time,
         color: req.body.color,
         status: req.body.status as "active" | "cancelled" | undefined,
-        recurrence_rule: req.body.recurring ? req.body.recurring_pattern : null,
+        recurrence_rule:
+          req.body.recurring === true
+            ? (req.body.recurring_pattern ?? null)
+            : null,
       };
 
       const tenantId = getTenantId(req.user);
@@ -515,7 +543,7 @@ router.put(
       );
 
       res.json(successResponse(updatedEvent, "Event erfolgreich aktualisiert"));
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("Error in PUT /api/calendar/:id:", getErrorMessage(error));
       res
         .status(500)
@@ -551,7 +579,7 @@ router.delete(
       }
 
       res.json(successResponse(null, "Event erfolgreich gelöscht"));
-    } catch (error) {
+    } catch (error: unknown) {
       console.error(
         "Error in DELETE /api/calendar/:id:",
         getErrorMessage(error),

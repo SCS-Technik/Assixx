@@ -106,7 +106,6 @@
         top: 0;
         width: 100%;
         height: 100%;
-        background-color: rgba(0, 0, 0, 0.7);
         backdrop-filter: blur(10px);
         display: none;
         justify-content: center;
@@ -114,7 +113,7 @@
       }
 
       .modal-content {
-        background: rgba(255, 255, 255, 0.02);
+        background: hsla(0, 0%, 8.2%, 0.84);
         backdrop-filter: blur(20px) saturate(180%);
         border: 1px solid rgba(255, 255, 255, 0.1);
         border-radius: var(--radius-md);
@@ -169,7 +168,7 @@
       document.addEventListener('DOMContentLoaded', () => {
         token = localStorage.getItem('token');
         if (!token) {
-          console.log('No token found, redirecting to login');
+          console.info('No token found, redirecting to login');
           window.location.href = '/';
           return;
         }
@@ -191,7 +190,7 @@
 
           if (response.ok) {
             const employees = await response.json();
-            console.log(`Loaded ${employees.length} archived employees`);
+            console.info(`Loaded ${employees.length} archived employees`);
 
             // Tabelle aktualisieren
             const tableBody = document.getElementById('archived-employees-table');
@@ -225,16 +224,16 @@
             }
           } else {
             console.error('Error loading archived employees:', response.statusText);
-            alert('Fehler beim Laden der archivierten Mitarbeiter.');
+            showError('Fehler beim Laden der archivierten Mitarbeiter.');
           }
         } catch (error) {
           console.error('Error loading archived employees:', error);
-          alert('Fehler beim Laden der archivierten Mitarbeiter.');
+          showError('Fehler beim Laden der archivierten Mitarbeiter.');
         }
       }
 
       // Mitarbeiter wiederherstellen
-      async function unarchiveEmployee(employeeId) {
+      window.unarchiveEmployee = async function (employeeId) {
         try {
           const response = await fetch(`/admin/unarchive-employee/${employeeId}`, {
             method: 'POST',
@@ -246,20 +245,20 @@
           });
 
           if (response.ok) {
-            alert('Mitarbeiter erfolgreich wiederhergestellt');
+            showSuccess('Mitarbeiter erfolgreich wiederhergestellt');
             loadArchivedEmployees(); // Tabelle aktualisieren
           } else {
             const errorData = await response.json();
-            alert(`Fehler: ${errorData.message || 'Unbekannter Fehler'}`);
+            showError(`Fehler: ${errorData.message || 'Unbekannter Fehler'}`);
           }
         } catch (error) {
           console.error('Error unarchiving employee:', error);
-          alert('Fehler beim Wiederherstellen des Mitarbeiters.');
+          showError('Fehler beim Wiederherstellen des Mitarbeiters.');
         }
-      }
+      };
 
       // Bestätigungsmodal für endgültiges Löschen
-      function confirmDelete(employeeId, employeeName) {
+      window.confirmDelete = function (employeeId, employeeName) {
         const modal = document.getElementById('confirm-modal');
         const modalTitle = document.getElementById('confirm-modal-title');
         const modalBody = document.getElementById('confirm-modal-body');
@@ -277,7 +276,7 @@
         };
 
         modal.style.display = 'flex';
-      }
+      };
 
       // Mitarbeiter endgültig löschen
       async function deleteEmployeeForce(employeeId) {
@@ -290,15 +289,15 @@
           });
 
           if (response.ok) {
-            alert('Mitarbeiter wurde endgültig gelöscht');
+            showSuccess('Mitarbeiter wurde endgültig gelöscht');
             loadArchivedEmployees(); // Tabelle aktualisieren
           } else {
             const errorData = await response.json();
-            alert(`Fehler: ${errorData.message || 'Unbekannter Fehler'}`);
+            showError(`Fehler: ${errorData.message || 'Unbekannter Fehler'}`);
           }
         } catch (error) {
           console.error('Error deleting employee:', error);
-          alert('Fehler beim Löschen des Mitarbeiters.');
+          showError('Fehler beim Löschen des Mitarbeiters.');
         }
       }
 

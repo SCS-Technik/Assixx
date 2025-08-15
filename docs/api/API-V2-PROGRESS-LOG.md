@@ -1,5 +1,125 @@
 # API v2 Implementation Progress Log
 
+## 28.01.2025 - Phase 8: Calendar Frontend Migration
+
+### 🎯 Calendar API v2 Frontend Migration
+
+**Zeit:** 5 Stunden
+**Status:** ✅ ABGESCHLOSSEN
+
+#### Erfolge:
+
+- ✅ calendar.ts vollständig migriert (15+ API Calls)
+- ✅ Feature Flag USE_API_V2_CALENDAR aktiviert
+- ✅ Badge-System für ungelesene Events implementiert
+- ✅ Statusanfrage-Feature (requires_response) entwickelt
+- ✅ Modal "Neue Termine mit Statusanfrage" erstellt
+- ✅ Privacy-Bug gefixt (Admins sehen keine privaten Events mehr)
+- ✅ Automatische Farbzuweisung basierend auf Event-Ebene
+
+#### Neue Features implementiert:
+
+1. **Badge-System für ungelesene Events:**
+   - Backend-Endpoint `/api/v2/calendar/unread-events`
+   - Datenbank-Migration für `requires_response` Feld
+   - Badge in Sidebar mit Auto-Update alle 30 Sekunden
+   - Modal öffnet sich automatisch bei ungelesenen Events
+
+2. **Statusanfrage-Feature:**
+   - Checkbox "Teilnehmer müssen Zusage/Absage geben"
+   - Nur Events mit `requires_response = true` erscheinen im Badge
+   - Direkte Zusage/Absage-Buttons im Modal
+   - Seite lädt automatisch neu nach Antwort
+
+#### Kritische Bug-Fixes:
+
+1. **Privacy-Bug:**
+
+   ```typescript
+   // Problem: Admins konnten alle privaten Events sehen
+   // Alt (Zeile 197 in calendar.ts):
+   if (filter === "all" && role !== "admin" && role !== "root")
+
+   // Neu (Privacy für alle):
+   if (filter === "all")
+   ```
+
+2. **Field-Mapping Issues:**
+
+   ```typescript
+   // v2 API: camelCase
+   {
+     (firstName, lastName, startTime, endTime);
+   }
+
+   // v1 API: snake_case
+   {
+     (first_name, last_name, start_time, end_time);
+   }
+
+   // Lösung: Bidirektionales Mapping
+   const firstName = user.first_name ?? user.firstName ?? "";
+   ```
+
+#### Technische Details:
+
+- ApiClient Integration vollständig
+- TypeScript strict typing durchgesetzt
+- Farb-Picker deprecated (automatische Farben)
+- Modal-Management optimiert
+- WebSocket-Updates für Badge-Count
+
+#### Fortschritt:
+
+- **31/64 Files migriert (48.4%)**
+- Phase 8 Planning & Organization: 1/3 abgeschlossen
+- Nächste Aufgaben: shifts.ts, shifts.html
+
+---
+
+## 08.08.2025 - Phase 7: Blackboard Frontend Migration
+
+### 🎯 Blackboard API v2 Frontend Migration
+
+**Zeit:** 2 Stunden
+**Status:** ✅ ABGESCHLOSSEN
+
+#### Erfolge:
+
+- ✅ blackboard.ts vollständig migriert (20+ API Calls)
+- ✅ Feature Flag USE_API_V2_BLACKBOARD aktiviert
+- ✅ Backend Routes bereits vorhanden (nur Routing-Fix benötigt)
+- ✅ blackboard-modal-update.html gelöscht (redundant)
+
+#### Kritischer Bug behoben:
+
+```typescript
+// Problem: v2 API nutzt andere Endpunkt-Struktur
+// Alt (falsch):
+"/api/v2/blackboard";
+
+// Neu (korrekt):
+"/api/v2/blackboard/entries";
+"/api/v2/blackboard/entries/{id}";
+"/api/v2/blackboard/entries/{id}/attachments";
+```
+
+#### Technische Details:
+
+- ApiClient Integration implementiert
+- Custom Modal statt browser confirm()
+- console.info → console.info (ESLint)
+- Async arrow functions → Promise.resolve()
+- TypeScript strict typing (kein `any`)
+
+#### Fortschritt:
+
+- **27/64 Files migriert (42.2%)**
+- Phase 7 Communication teilweise abgeschlossen
+- Nächste Aufgaben: chat.ts, notification.service.ts
+
+---
+
 ## 02.08.2025 - Tag 9: Features API v2 MIT VOLLSTÄNDIGEN TESTS! 🎯✅
 
 ### 🚀 Features API v2 Implementation (Nachmittag Session - 3 Stunden)
@@ -322,7 +442,7 @@
 ### 🔧 Wichtige Lessons Learned
 
 1. **Test-DB Schema muss EXAKT mit Produktion übereinstimmen**
-2. **Nach docker-compose restart: `pnpm build:ts` nötig**
+2. **Nach docker-compose restart: `pnpm build` nötig**
 3. **Volume Mounts für alle Test-Files essentiell**
 4. **Multi-Tenant Isolation bei JEDER Query prüfen**
 
@@ -393,7 +513,7 @@
 
 **JWT Token Debugging Session:**
 
-- console.log in Jest war unterdrückt
+- console.info in Jest war unterdrückt
 - Debug-Logs in Datei geschrieben
 - JWT enthält korrekte Felder: isRoleSwitched, activeRole
 - Auth Middleware setzt diese nun korrekt auf req.user
@@ -1643,7 +1763,7 @@ curl -s http://localhost:3000/api-docs/v2/swagger.json | jq '.paths | keys'
 2. **Technische Herausforderungen gelöst:** ✅
    - TypeScript union type Error → Import aus utils/db.js
    - Transaction Hanging → Alle Transactions entfernt
-   - Console.log nicht sichtbar → import { log, error } from "console"
+   - console.info nicht sichtbar → import { log, error } from "console"
    - MySQL Parameter Binding Error → String Interpolation
    - NaN in Pagination → Number.isNaN() Checks
    - Content-Type Headers → Zu allen POST Requests

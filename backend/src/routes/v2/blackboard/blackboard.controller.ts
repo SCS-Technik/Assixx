@@ -5,7 +5,8 @@
 
 import { Response } from "express";
 
-import { AuthenticatedRequest } from "../../../types/request.types.js";
+import RootLog from "../../../models/rootLog";
+import type { AuthenticatedRequest } from "../../../types/request.types.js";
 import {
   successResponse,
   errorResponse,
@@ -55,7 +56,19 @@ interface AttachmentResponse {
   uploaderName?: string;
 }
 
-export async function listEntries(req: AuthenticatedRequest, res: Response) {
+interface BlackboardEntry {
+  id: number;
+  title: string;
+  content: string;
+  status: string;
+  priority: string;
+  [key: string]: unknown;
+}
+
+export async function listEntries(
+  req: AuthenticatedRequest,
+  res: Response,
+): Promise<void> {
   try {
     const filters = {
       status: req.query.status as "active" | "archived" | undefined,
@@ -66,8 +79,14 @@ export async function listEntries(req: AuthenticatedRequest, res: Response) {
         | "team"
         | undefined,
       search: req.query.search as string | undefined,
-      page: req.query.page ? parseInt(req.query.page as string, 10) : 1,
-      limit: req.query.limit ? parseInt(req.query.limit as string, 10) : 10,
+      page:
+        req.query.page !== undefined
+          ? parseInt(req.query.page as string, 10)
+          : 1,
+      limit:
+        req.query.limit !== undefined
+          ? parseInt(req.query.limit as string, 10)
+          : 10,
       sortBy: req.query.sortBy as string | undefined,
       sortDir: req.query.sortDir as "ASC" | "DESC" | undefined,
       priority: req.query.priority as string | undefined,
@@ -77,11 +96,22 @@ export async function listEntries(req: AuthenticatedRequest, res: Response) {
           : undefined,
     };
 
-    const result = await blackboardService.listEntries(
+    const serviceResult = await blackboardService.listEntries(
       req.user.tenant_id,
       req.user.id,
       filters,
     );
+
+    // Type assertion to satisfy ESLint
+    const result = serviceResult as {
+      entries: BlackboardEntry[];
+      pagination: {
+        page: number;
+        totalPages: number;
+        limit: number;
+        total: number;
+      };
+    };
 
     res.json(
       paginatedResponse(result.entries, {
@@ -91,7 +121,7 @@ export async function listEntries(req: AuthenticatedRequest, res: Response) {
         totalItems: result.pagination.total,
       }),
     );
-  } catch (error) {
+  } catch (error: unknown) {
     logger.error("Error listing blackboard entries:", error);
     if (error instanceof ServiceError) {
       res
@@ -105,7 +135,10 @@ export async function listEntries(req: AuthenticatedRequest, res: Response) {
   }
 }
 
-export async function getEntryById(req: AuthenticatedRequest, res: Response) {
+export async function getEntryById(
+  req: AuthenticatedRequest,
+  res: Response,
+): Promise<void> {
   try {
     const entryId = parseInt(req.params.id, 10);
     const entry = await blackboardService.getEntryById(
@@ -115,7 +148,7 @@ export async function getEntryById(req: AuthenticatedRequest, res: Response) {
     );
 
     res.json(successResponse(entry));
-  } catch (error) {
+  } catch (error: unknown) {
     logger.error("Error getting blackboard entry:", error);
     if (error instanceof ServiceError) {
       res
@@ -150,8 +183,31 @@ export async function createEntry(req: AuthenticatedRequest, res: Response) {
       req.user.id,
     );
 
+    // Log blackboard entry creation
+    await RootLog.create({
+      tenant_id: req.user.tenant_id,
+      user_id: req.user.id,
+      action: "create",
+      entity_type: "blackboard_entry",
+      entity_id: (entry as BlackboardEntry).id,
+      details: `Erstellt: ${entryData.title}`,
+      new_values: {
+        title: entryData.title,
+        content: entryData.content,
+        org_level: entryData.orgLevel,
+        org_id: entryData.orgId,
+        priority: entryData.priority,
+        expires_at: entryData.expiresAt,
+        requires_confirmation: entryData.requiresConfirmation,
+        created_by: req.user.email,
+      },
+      ip_address: req.ip ?? req.socket.remoteAddress,
+      user_agent: req.get("user-agent"),
+      was_role_switched: false,
+    });
+
     res.status(201).json(successResponse(entry));
-  } catch (error) {
+  } catch (error: unknown) {
     logger.error("Error creating blackboard entry:", error);
     if (error instanceof ServiceError) {
       res
@@ -182,6 +238,13 @@ export async function updateEntry(req: AuthenticatedRequest, res: Response) {
       tags: body.tags,
     };
 
+    // Get old entry data for logging
+    const oldEntry = await blackboardService.getEntryById(
+      entryId,
+      req.user.tenant_id,
+      req.user.id,
+    );
+
     const entry = await blackboardService.updateEntry(
       entryId,
       updateData,
@@ -189,8 +252,34 @@ export async function updateEntry(req: AuthenticatedRequest, res: Response) {
       req.user.id,
     );
 
+    // Log blackboard entry update
+    await RootLog.create({
+      tenant_id: req.user.tenant_id,
+      user_id: req.user.id,
+      action: "update",
+      entity_type: "blackboard_entry",
+      entity_id: entryId,
+      details: `Aktualisiert: ${updateData.title}`,
+      old_values: {
+        title: (oldEntry as BlackboardEntry).title,
+        content: (oldEntry as BlackboardEntry).content,
+        status: (oldEntry as BlackboardEntry).status,
+        priority: (oldEntry as BlackboardEntry).priority,
+      },
+      new_values: {
+        title: updateData.title,
+        content: updateData.content,
+        status: updateData.status,
+        priority: updateData.priority,
+        updated_by: req.user.email,
+      },
+      ip_address: req.ip ?? req.socket.remoteAddress,
+      user_agent: req.get("user-agent"),
+      was_role_switched: false,
+    });
+
     res.json(successResponse(entry));
-  } catch (error) {
+  } catch (error: unknown) {
     logger.error("Error updating blackboard entry:", error);
     if (error instanceof ServiceError) {
       res
@@ -207,14 +296,42 @@ export async function updateEntry(req: AuthenticatedRequest, res: Response) {
 export async function deleteEntry(req: AuthenticatedRequest, res: Response) {
   try {
     const entryId = parseInt(req.params.id, 10);
+
+    // Get entry data before deletion for logging
+    const deletedEntry = await blackboardService.getEntryById(
+      entryId,
+      req.user.tenant_id,
+      req.user.id,
+    );
+
     const result = await blackboardService.deleteEntry(
       entryId,
       req.user.tenant_id,
       req.user.id,
     );
 
+    // Log blackboard entry deletion
+    await RootLog.create({
+      tenant_id: req.user.tenant_id,
+      user_id: req.user.id,
+      action: "delete",
+      entity_type: "blackboard_entry",
+      entity_id: entryId,
+      details: `Gelöscht: ${String((deletedEntry as BlackboardEntry).title)}`,
+      old_values: {
+        title: (deletedEntry as BlackboardEntry).title,
+        content: (deletedEntry as BlackboardEntry).content,
+        status: (deletedEntry as BlackboardEntry).status,
+        priority: (deletedEntry as BlackboardEntry).priority,
+        deleted_by: req.user.email,
+      },
+      ip_address: req.ip ?? req.socket.remoteAddress,
+      user_agent: req.get("user-agent"),
+      was_role_switched: false,
+    });
+
     res.json(successResponse(result));
-  } catch (error) {
+  } catch (error: unknown) {
     logger.error("Error deleting blackboard entry:", error);
     if (error instanceof ServiceError) {
       res
@@ -237,10 +354,27 @@ export async function archiveEntry(req: AuthenticatedRequest, res: Response) {
       req.user.id,
     );
 
+    // Log blackboard entry archiving
+    await RootLog.create({
+      tenant_id: req.user.tenant_id,
+      user_id: req.user.id,
+      action: "archive",
+      entity_type: "blackboard_entry",
+      entity_id: entryId,
+      details: `Archiviert: Schwarzes Brett Eintrag`,
+      new_values: {
+        status: "archived",
+        archived_by: req.user.email,
+      },
+      ip_address: req.ip ?? req.socket.remoteAddress,
+      user_agent: req.get("user-agent"),
+      was_role_switched: false,
+    });
+
     res.json(
       successResponse({ message: "Entry archived successfully", entry }),
     );
-  } catch (error) {
+  } catch (error: unknown) {
     logger.error("Error archiving blackboard entry:", error);
     if (error instanceof ServiceError) {
       res
@@ -266,7 +400,7 @@ export async function unarchiveEntry(req: AuthenticatedRequest, res: Response) {
     res.json(
       successResponse({ message: "Entry unarchived successfully", entry }),
     );
-  } catch (error) {
+  } catch (error: unknown) {
     logger.error("Error unarchiving blackboard entry:", error);
     if (error instanceof ServiceError) {
       res
@@ -286,7 +420,7 @@ export async function confirmEntry(req: AuthenticatedRequest, res: Response) {
     const result = await blackboardService.confirmEntry(entryId, req.user.id);
 
     res.json(successResponse(result));
-  } catch (error) {
+  } catch (error: unknown) {
     logger.error("Error confirming blackboard entry:", error);
     if (error instanceof ServiceError) {
       res
@@ -312,7 +446,7 @@ export async function getConfirmationStatus(
     );
 
     res.json(successResponse(users));
-  } catch (error) {
+  } catch (error: unknown) {
     logger.error("Error getting confirmation status:", error);
     if (error instanceof ServiceError) {
       res
@@ -341,7 +475,7 @@ export async function getDashboardEntries(
     );
 
     res.json(successResponse(entries));
-  } catch (error) {
+  } catch (error: unknown) {
     logger.error("Error getting dashboard entries:", error);
     if (error instanceof ServiceError) {
       res
@@ -359,7 +493,7 @@ export async function getAllTags(req: AuthenticatedRequest, res: Response) {
   try {
     const tags = await blackboardService.getAllTags(req.user.tenant_id);
     res.json(successResponse(tags));
-  } catch (error) {
+  } catch (error: unknown) {
     logger.error("Error getting tags:", error);
     if (error instanceof ServiceError) {
       res
@@ -404,7 +538,7 @@ export async function uploadAttachment(
       attachmentData,
     );
     res.status(201).json(successResponse(result));
-  } catch (error) {
+  } catch (error: unknown) {
     logger.error("Error uploading attachment:", error);
     if (error instanceof ServiceError) {
       res
@@ -431,7 +565,7 @@ export async function getAttachments(req: AuthenticatedRequest, res: Response) {
 
     const attachments = await blackboardService.getEntryAttachments(entryId);
     res.json(successResponse(attachments));
-  } catch (error) {
+  } catch (error: unknown) {
     logger.error("Error getting attachments:", error);
     if (error instanceof ServiceError) {
       res
@@ -454,11 +588,11 @@ export async function downloadAttachment(
     const attachment = (await blackboardService.getAttachmentById(
       attachmentId,
       req.user.tenant_id,
-    )) as AttachmentResponse;
+    )) as unknown as AttachmentResponse;
 
     // Send file
     res.download(attachment.filePath, attachment.originalName);
-  } catch (error) {
+  } catch (error: unknown) {
     logger.error("Error downloading attachment:", error);
     if (error instanceof ServiceError) {
       res
@@ -484,7 +618,7 @@ export async function deleteAttachment(
     );
 
     res.json(successResponse(result));
-  } catch (error) {
+  } catch (error: unknown) {
     logger.error("Error deleting attachment:", error);
     if (error instanceof ServiceError) {
       res

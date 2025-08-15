@@ -100,11 +100,11 @@ export class ChatWebSocketServer {
 
       const decoded = jwt.verify(token, jwtSecret) as {
         id: number;
-        tenant_id: number;
+        tenantId: number; // v2 uses camelCase!
         role: string;
       };
       const userId = decoded.id;
-      const tenantId = decoded.tenant_id;
+      const tenantId = decoded.tenantId; // Use camelCase to match v2 tokens
 
       // Benutzer-Informationen zur Verbindung hinzufügen
       ws.userId = userId;
@@ -131,7 +131,7 @@ export class ChatWebSocketServer {
 
       // Online-Status an andere Benutzer senden
       await this.broadcastUserStatus(userId, tenantId, "online");
-    } catch (error) {
+    } catch (error: unknown) {
       logger.error("WebSocket Authentifizierung fehlgeschlagen:", error);
       ws.close(1008, "Authentifizierung fehlgeschlagen");
     }
@@ -172,7 +172,7 @@ export class ChatWebSocketServer {
         default:
           logger.warn(`Unbekannter WebSocket Message Typ: ${message.type}`);
       }
-    } catch (error) {
+    } catch (error: unknown) {
       logger.error("Fehler beim Verarbeiten der WebSocket Nachricht:", error);
       this.sendMessage(ws, {
         type: "error",
@@ -201,11 +201,13 @@ export class ChatWebSocketServer {
         SELECT cp.user_id 
         FROM conversation_participants cp
         JOIN conversations c ON cp.conversation_id = c.id
-        WHERE cp.conversation_id = ? AND c.tenant_id = ?
+        WHERE cp.conversation_id = ? 
+        AND c.tenant_id = ?
+        AND cp.tenant_id = ?
       `;
       const [participants] = await pool.query<RowDataPacket[]>(
         participantQuery,
-        [conversationId, ws.tenantId],
+        [conversationId, ws.tenantId, ws.tenantId],
       );
 
       const participantIds = participants.map(
@@ -214,6 +216,18 @@ export class ChatWebSocketServer {
 
       // Convert IDs to strings for comparison since ws.userId might be a string
       const participantIdsStr = participantIds.map((id: number) => String(id));
+
+      // Debug logging
+      logger.error(`[WebSocket Debug] Permission check:`, {
+        conversationId,
+        wsUserId: ws.userId,
+        wsTenantId: ws.tenantId,
+        participantIds,
+        participantIdsStr,
+        userIdString: String(ws.userId),
+        isIncluded: participantIdsStr.includes(String(ws.userId)),
+      });
+
       if (!participantIdsStr.includes(String(ws.userId))) {
         this.sendMessage(ws, {
           type: "error",
@@ -285,7 +299,7 @@ export class ChatWebSocketServer {
         type: "message_sent",
         data: { messageId, timestamp: new Date().toISOString() },
       });
-    } catch (error) {
+    } catch (error: unknown) {
       logger.error("Fehler beim Senden der Nachricht:", error);
       this.sendMessage(ws, {
         type: "error",
@@ -307,11 +321,14 @@ export class ChatWebSocketServer {
         SELECT cp.user_id 
         FROM conversation_participants cp
         JOIN conversations c ON cp.conversation_id = c.id
-        WHERE cp.conversation_id = ? AND c.tenant_id = ? AND cp.user_id != ?
+        WHERE cp.conversation_id = ? 
+        AND c.tenant_id = ? 
+        AND cp.tenant_id = ?
+        AND cp.user_id != ?
       `;
       const [participants] = await pool.query<RowDataPacket[]>(
         participantQuery,
-        [conversationId, ws.tenantId, ws.userId],
+        [conversationId, ws.tenantId, ws.tenantId, ws.userId],
       );
 
       // Typing-Event an andere Teilnehmer senden
@@ -328,7 +345,7 @@ export class ChatWebSocketServer {
           });
         }
       }
-    } catch (error) {
+    } catch (error: unknown) {
       logger.error("Fehler beim Typing-Event:", error);
     }
   }
@@ -379,7 +396,7 @@ export class ChatWebSocketServer {
           });
         }
       }
-    } catch (error) {
+    } catch (error: unknown) {
       logger.error("Fehler beim Markieren als gelesen:", error);
     }
   }
@@ -400,11 +417,14 @@ export class ChatWebSocketServer {
         SELECT cp.user_id 
         FROM conversation_participants cp
         JOIN conversations c ON cp.conversation_id = c.id
-        WHERE cp.conversation_id = ? AND c.tenant_id = ? AND cp.user_id != ?
+        WHERE cp.conversation_id = ? 
+        AND c.tenant_id = ? 
+        AND cp.tenant_id = ?
+        AND cp.user_id != ?
       `;
       const [participants] = await pool.query<RowDataPacket[]>(
         participantQuery,
-        [conversationId, ws.tenantId, ws.userId],
+        [conversationId, ws.tenantId, ws.tenantId, ws.userId],
       );
 
       for (const participant of participants) {
@@ -420,7 +440,7 @@ export class ChatWebSocketServer {
           });
         }
       }
-    } catch (error) {
+    } catch (error: unknown) {
       logger.error("Fehler beim Beitreten zur Unterhaltung:", error);
     }
   }
@@ -473,7 +493,7 @@ export class ChatWebSocketServer {
           });
         }
       }
-    } catch (error) {
+    } catch (error: unknown) {
       logger.error("Fehler beim Senden des User-Status:", error);
     }
   }
@@ -546,9 +566,9 @@ export class ChatWebSocketServer {
           content: message.content,
           sender_id: message.sender_id,
           sender_name: sender
-            ? [sender.first_name ?? "", sender.last_name ?? ""]
+            ? ([sender.first_name ?? "", sender.last_name ?? ""]
                 .filter((n: string) => n)
-                .join(" ") || "Unbekannter Benutzer"
+                .join(" ") ?? "Unbekannter Benutzer")
             : "Unbekannter Benutzer",
           first_name: sender?.first_name ?? "",
           last_name: sender?.last_name ?? "",
@@ -575,7 +595,7 @@ export class ChatWebSocketServer {
           }
         }
       }
-    } catch (error) {
+    } catch (error: unknown) {
       logger.error("Fehler beim Verarbeiten geplanter Nachrichten:", error);
     }
   }
@@ -664,7 +684,7 @@ export class ChatWebSocketServer {
             'UPDATE messages SET delivery_status = "delivered" WHERE id = ?',
             [message.message_id],
           );
-        } catch (error) {
+        } catch (error: unknown) {
           logger.error(
             `Fehler beim Zustellen der Nachricht ${message.message_id}:`,
             error,
@@ -694,7 +714,7 @@ export class ChatWebSocketServer {
           }
         }
       }
-    } catch (error) {
+    } catch (error: unknown) {
       logger.error(
         "Fehler beim Verarbeiten der Message Delivery Queue:",
         error,

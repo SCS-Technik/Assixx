@@ -5,7 +5,7 @@
 
 import { RowDataPacket } from "mysql2";
 
-import { RootLog } from "../../../models/rootLog";
+import RootLog from "../../../models/rootLog";
 import Shift from "../../../models/shift";
 import { dbToApi, apiToDb } from "../../../utils/fieldMapping";
 import { logger } from "../../../utils/logger";
@@ -146,7 +146,7 @@ interface DbShiftData extends RowDataPacket {
 
 // Helper function to convert DB shift to API format
 function dbShiftToApi(dbShift: DbShiftData): ShiftApiResponse {
-  const apiShift = dbToApi<ShiftApiResponse>(dbShift);
+  const apiShift = dbToApi(dbShift) as unknown as ShiftApiResponse;
 
   // Extract time from datetime fields
   if (dbShift.start_time) {
@@ -158,7 +158,7 @@ function dbShiftToApi(dbShift: DbShiftData): ShiftApiResponse {
         const minutes = startTime.getMinutes().toString().padStart(2, "0");
         apiShift.startTime = `${hours}:${minutes}`;
       }
-    } catch (e) {
+    } catch (e: unknown) {
       logger.error("Error parsing start_time:", e);
     }
   }
@@ -172,7 +172,7 @@ function dbShiftToApi(dbShift: DbShiftData): ShiftApiResponse {
         const minutes = endTime.getMinutes().toString().padStart(2, "0");
         apiShift.endTime = `${hours}:${minutes}`;
       }
-    } catch (e) {
+    } catch (e: unknown) {
       logger.error("Error parsing end_time:", e);
     }
   }
@@ -184,7 +184,7 @@ function dbShiftToApi(dbShift: DbShiftData): ShiftApiResponse {
       if (!isNaN(date.getTime())) {
         apiShift.date = date.toISOString().split("T")[0]; // YYYY-MM-DD format
       }
-    } catch (e) {
+    } catch (e: unknown) {
       logger.error("Error parsing date:", e);
     }
   }
@@ -195,9 +195,12 @@ function dbShiftToApi(dbShift: DbShiftData): ShiftApiResponse {
 export class ShiftsService {
   // ============= SHIFTS CRUD =============
 
-  async listShifts(tenantId: number, filters: ShiftFilters) {
+  async listShifts(
+    tenantId: number,
+    filters: ShiftFilters,
+  ): Promise<ShiftApiResponse[]> {
     try {
-      const convertedFilters = apiToDb<Record<string, unknown>>(
+      const convertedFilters = apiToDb(
         filters as unknown as Record<string, unknown>,
       );
       const dbFilters = {
@@ -207,20 +210,20 @@ export class ShiftsService {
 
       const shifts = await Shift.findAll(dbFilters);
       return shifts.map((shift) => dbShiftToApi(shift));
-    } catch (error) {
+    } catch (error: unknown) {
       logger.error("Error listing shifts:", error);
       throw new ServiceError("LIST_SHIFTS_ERROR", "Failed to list shifts");
     }
   }
 
-  async getShiftById(id: number, tenantId: number) {
+  async getShiftById(id: number, tenantId: number): Promise<ShiftApiResponse> {
     try {
       const shift = await Shift.findById(id, tenantId);
       if (!shift) {
         throw new ServiceError("SHIFT_NOT_FOUND", "Shift not found");
       }
       return dbShiftToApi(shift);
-    } catch (error) {
+    } catch (error: unknown) {
       if (error instanceof ServiceError) throw error;
       logger.error("Error getting shift:", error);
       throw new ServiceError("GET_SHIFT_ERROR", "Failed to get shift");
@@ -233,11 +236,9 @@ export class ShiftsService {
     userId: number,
     ipAddress?: string,
     userAgent?: string,
-  ) {
+  ): Promise<ShiftApiResponse> {
     try {
-      const convertedData = apiToDb<Record<string, unknown>>(
-        data as unknown as Record<string, unknown>,
-      );
+      const convertedData = apiToDb(data as unknown as Record<string, unknown>);
       const dbData = {
         ...convertedData,
         tenant_id: tenantId,
@@ -258,8 +259,8 @@ export class ShiftsService {
         user_agent: userAgent,
       });
 
-      return this.getShiftById(shiftId, tenantId);
-    } catch (error) {
+      return await this.getShiftById(shiftId, tenantId);
+    } catch (error: unknown) {
       logger.error("Error creating shift:", error);
       throw new ServiceError("CREATE_SHIFT_ERROR", "Failed to create shift");
     }
@@ -272,7 +273,7 @@ export class ShiftsService {
     userId: number,
     ipAddress?: string,
     userAgent?: string,
-  ) {
+  ): Promise<ShiftApiResponse> {
     try {
       // Check if shift exists
       const oldShift = await this.getShiftById(id, tenantId);
@@ -293,8 +294,8 @@ export class ShiftsService {
         user_agent: userAgent,
       });
 
-      return this.getShiftById(id, tenantId);
-    } catch (error) {
+      return await this.getShiftById(id, tenantId);
+    } catch (error: unknown) {
       if (error instanceof ServiceError) throw error;
       logger.error("Error updating shift:", error);
       throw new ServiceError("UPDATE_SHIFT_ERROR", "Failed to update shift");
@@ -307,7 +308,7 @@ export class ShiftsService {
     userId: number,
     ipAddress?: string,
     userAgent?: string,
-  ) {
+  ): Promise<{ message: string }> {
     try {
       const shift = await this.getShiftById(id, tenantId);
 
@@ -326,7 +327,7 @@ export class ShiftsService {
       });
 
       return { message: "Shift deleted successfully" };
-    } catch (error) {
+    } catch (error: unknown) {
       if (error instanceof ServiceError) throw error;
       logger.error("Error deleting shift:", error);
       throw new ServiceError("DELETE_SHIFT_ERROR", "Failed to delete shift");
@@ -335,11 +336,11 @@ export class ShiftsService {
 
   // ============= TEMPLATES =============
 
-  async listTemplates(tenantId: number) {
+  async listTemplates(tenantId: number): Promise<unknown[]> {
     try {
       const templates = await Shift.getTemplates(tenantId);
       return templates.map((template) => dbToApi(template));
-    } catch (error) {
+    } catch (error: unknown) {
       logger.error("Error listing templates:", error);
       throw new ServiceError(
         "LIST_TEMPLATES_ERROR",
@@ -348,14 +349,14 @@ export class ShiftsService {
     }
   }
 
-  async getTemplateById(id: number, tenantId: number) {
+  async getTemplateById(id: number, tenantId: number): Promise<unknown> {
     try {
       const template = await Shift.getTemplateById(id, tenantId);
       if (!template) {
         throw new ServiceError("TEMPLATE_NOT_FOUND", "Template not found");
       }
       return dbToApi(template);
-    } catch (error) {
+    } catch (error: unknown) {
       logger.error("Error getting template:", error);
       throw new ServiceError("GET_TEMPLATE_ERROR", "Failed to get template");
     }
@@ -367,11 +368,9 @@ export class ShiftsService {
     userId: number,
     ipAddress?: string,
     userAgent?: string,
-  ) {
+  ): Promise<unknown> {
     try {
-      const convertedData = apiToDb<Record<string, unknown>>(
-        data as unknown as Record<string, unknown>,
-      );
+      const convertedData = apiToDb(data as unknown as Record<string, unknown>);
       const dbData = {
         ...convertedData,
         tenant_id: tenantId,
@@ -403,8 +402,8 @@ export class ShiftsService {
         user_agent: userAgent,
       });
 
-      return this.getTemplateById(templateId, tenantId);
-    } catch (error) {
+      return await this.getTemplateById(templateId, tenantId);
+    } catch (error: unknown) {
       logger.error("Error creating template:", error);
       throw new ServiceError(
         "CREATE_TEMPLATE_ERROR",
@@ -420,7 +419,7 @@ export class ShiftsService {
     userId: number,
     ipAddress?: string,
     userAgent?: string,
-  ) {
+  ): Promise<unknown> {
     try {
       const oldTemplate = await this.getTemplateById(id, tenantId);
 
@@ -452,8 +451,8 @@ export class ShiftsService {
         user_agent: userAgent,
       });
 
-      return this.getTemplateById(id, tenantId);
-    } catch (error) {
+      return await this.getTemplateById(id, tenantId);
+    } catch (error: unknown) {
       if (error instanceof ServiceError) throw error;
       logger.error("Error updating template:", error);
       throw new ServiceError(
@@ -469,7 +468,7 @@ export class ShiftsService {
     userId: number,
     ipAddress?: string,
     userAgent?: string,
-  ) {
+  ): Promise<{ message: string }> {
     try {
       const template = await this.getTemplateById(id, tenantId);
 
@@ -488,7 +487,7 @@ export class ShiftsService {
       });
 
       return { message: "Template deleted successfully" };
-    } catch (error) {
+    } catch (error: unknown) {
       if (error instanceof ServiceError) throw error;
       logger.error("Error deleting template:", error);
       throw new ServiceError(
@@ -503,11 +502,11 @@ export class ShiftsService {
   async listSwapRequests(
     tenantId: number,
     filters: { userId?: number; status?: string },
-  ) {
+  ): Promise<unknown[]> {
     try {
       const requests = await Shift.getSwapRequests(tenantId, filters);
       return requests.map((request) => dbToApi(request));
-    } catch (error) {
+    } catch (error: unknown) {
       logger.error("Error listing swap requests:", error);
       throw new ServiceError(
         "LIST_SWAP_REQUESTS_ERROR",
@@ -522,11 +521,11 @@ export class ShiftsService {
     userId: number,
     ipAddress?: string,
     userAgent?: string,
-  ) {
+  ): Promise<{ id: number; message: string; [key: string]: unknown }> {
     try {
       // Verify shift exists and belongs to user
       const shift = await this.getShiftById(data.shiftId, tenantId);
-      if ((shift as ShiftApiResponse).userId !== userId) {
+      if (shift.userId !== userId) {
         throw new ServiceError(
           "FORBIDDEN",
           "You can only request swaps for your own shifts",
@@ -556,7 +555,7 @@ export class ShiftsService {
         user_agent: userAgent,
       });
 
-      const convertedResult = dbToApi<Record<string, unknown>>(
+      const convertedResult = dbToApi(
         dbData as unknown as Record<string, unknown>,
       );
       return {
@@ -564,7 +563,7 @@ export class ShiftsService {
         ...convertedResult,
         message: "Swap request created successfully",
       };
-    } catch (error) {
+    } catch (error: unknown) {
       if (error instanceof ServiceError) throw error;
       logger.error("Error creating swap request:", error);
       throw new ServiceError(
@@ -581,7 +580,7 @@ export class ShiftsService {
     userId: number,
     ipAddress?: string,
     userAgent?: string,
-  ) {
+  ): Promise<{ message: string }> {
     try {
       const request = await Shift.getSwapRequestById(id, tenantId);
       if (!request) {
@@ -607,7 +606,7 @@ export class ShiftsService {
       });
 
       return { message: `Swap request ${status} successfully` };
-    } catch (error) {
+    } catch (error: unknown) {
       if (error instanceof ServiceError) throw error;
       logger.error("Error updating swap request:", error);
       throw new ServiceError(
@@ -619,7 +618,10 @@ export class ShiftsService {
 
   // ============= OVERTIME =============
 
-  async getOvertimeReport(data: OverTimeData, tenantId: number) {
+  async getOvertimeReport(
+    data: OverTimeData,
+    tenantId: number,
+  ): Promise<unknown> {
     try {
       const overtime = await Shift.getOvertimeByUser(
         data.userId,
@@ -628,7 +630,7 @@ export class ShiftsService {
         tenantId,
       );
       return dbToApi(overtime);
-    } catch (error) {
+    } catch (error: unknown) {
       logger.error("Error getting overtime report:", error);
       throw new ServiceError(
         "GET_OVERTIME_ERROR",
@@ -643,7 +645,7 @@ export class ShiftsService {
     filters: ShiftFilters,
     tenantId: number,
     format: "csv" | "excel" = "csv",
-  ) {
+  ): Promise<string> {
     try {
       const shifts = await this.listShifts(tenantId, {
         ...filters,
@@ -651,7 +653,7 @@ export class ShiftsService {
       });
 
       if (format === "csv") {
-        return this.generateCSV(shifts as ShiftApiResponse[]);
+        return this.generateCSV(shifts);
       } else {
         // TODO: Implement Excel export
         throw new ServiceError(
@@ -659,7 +661,7 @@ export class ShiftsService {
           "Excel export not yet implemented",
         );
       }
-    } catch (error) {
+    } catch (error: unknown) {
       if (error instanceof ServiceError) throw error;
       logger.error("Error exporting shifts:", error);
       throw new ServiceError("EXPORT_ERROR", "Failed to export shifts");

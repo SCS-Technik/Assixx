@@ -96,7 +96,7 @@ router.post(
   authLimiter,
   ...security.auth(signupValidation),
   typed.body<SignupBody>(async (req, res) => {
-    console.log("[SIGNUP DEBUG] Request received!");
+    console.info("[SIGNUP DEBUG] Request received!");
     try {
       logger.info(
         "[DEBUG] Signup request received at " + new Date().toISOString(),
@@ -172,7 +172,7 @@ router.post(
       };
 
       res.json(successResponse(response, "Registrierung erfolgreich"));
-    } catch (error) {
+    } catch (error: unknown) {
       logger.error("Signup-Fehler:", error);
       res.status(500).json(errorResponse("Fehler bei der Registrierung", 500));
     }
@@ -202,7 +202,7 @@ router.get(
       const available: boolean = await Tenant.isSubdomainAvailable(subdomain);
       const response: SubdomainAvailabilityResponse = { available };
       res.json(successResponse(response));
-    } catch (error) {
+    } catch (error: unknown) {
       logger.error("Subdomain-Check-Fehler:", error);
       res.status(500).json(errorResponse("Fehler bei der Überprüfung", 500));
     }

@@ -4,6 +4,7 @@
  */
 
 import type { User, Document } from '../types/api.types';
+import { apiClient } from '../utils/api-client';
 
 import { getAuthToken, showError } from './auth';
 import { formatDate, escapeHtml } from './common';
@@ -20,22 +21,26 @@ interface EmployeeInfo extends User {
  * Download a document
  */
 function downloadDocument(docId?: string | number): void {
-  if (!docId) {
+  if (docId === undefined) {
     console.error('No document ID provided');
     return;
   }
 
   const token = getAuthToken();
-  if (!token) return;
+  if (token === null || token === '') return;
 
-  // Create a download link and trigger it
+  // Create a download link with proper API version and authorization
+  const useV2 = window.FEATURE_FLAGS?.USE_API_V2_DOCUMENTS;
+  const apiPrefix = useV2 === true ? '/api/v2' : '/api';
+
   const link = document.createElement('a');
-  link.href = `/api/documents/${docId}/download`;
+  link.href = `${apiPrefix}/documents/${docId}/download`;
   link.download = '';
   link.style.display = 'none';
 
-  // Add authorization header
-  link.setAttribute('download', '');
+  // Add authorization header via query parameter for download
+  // Note: This is a workaround since we can't set headers on anchor tag downloads
+  link.href += `?token=${encodeURIComponent(token)}`;
 
   document.body.appendChild(link);
   link.click();
@@ -44,51 +49,51 @@ function downloadDocument(docId?: string | number): void {
 
 document.addEventListener('DOMContentLoaded', () => {
   // Debug logging
-  console.log('[Employee Dashboard] Starting initialization...');
+  console.info('[Employee Dashboard] Starting initialization...');
 
   // Check if admin is viewing as employee
   const userRole = localStorage.getItem('userRole');
   const activeRole = localStorage.getItem('activeRole');
   const token = localStorage.getItem('token');
 
-  console.log('[Employee Dashboard] Role Check:', {
+  console.info('[Employee Dashboard] Role Check:', {
     userRole,
     activeRole,
-    token: token ? 'exists' : 'missing',
+    token: token !== null && token !== '' ? 'exists' : 'missing',
     pathname: window.location.pathname,
   });
 
   const isAdminAsEmployee = userRole === 'admin' && activeRole === 'employee';
 
-  console.log('[Employee Dashboard] Is Admin as Employee:', isAdminAsEmployee);
+  console.info('[Employee Dashboard] Is Admin as Employee:', isAdminAsEmployee);
 
   // Show role indicator for admins
   if (isAdminAsEmployee) {
-    const roleIndicator = document.getElementById('role-indicator') as HTMLElement;
-    const switchBtn = document.getElementById('role-switch-btn') as HTMLButtonElement;
+    const roleIndicator = document.getElementById('role-indicator');
+    const switchBtn = document.getElementById('role-switch-btn') as HTMLButtonElement | null;
 
     if (roleIndicator) {
       roleIndicator.style.display = 'inline-flex';
     }
-    if (switchBtn) {
+    if (switchBtn !== null) {
       switchBtn.style.display = 'flex';
     }
   }
 
   // DOM elements
-  const documentTableBody = document.getElementById('recent-documents') as HTMLTableSectionElement;
-  const logoutBtn = document.getElementById('logout-btn') as HTMLButtonElement;
-  const searchForm = document.getElementById('search-form') as HTMLFormElement;
-  const searchInput = document.getElementById('search-input') as HTMLInputElement;
+  const documentTableBody = document.getElementById('recent-documents') as HTMLTableSectionElement | null;
+  const logoutBtn = document.getElementById('logout-btn') as HTMLButtonElement | null;
+  const searchForm = document.getElementById('search-form') as HTMLFormElement | null;
+  const searchInput = document.getElementById('search-input') as HTMLInputElement | null;
 
   // Search functionality - only add if search form exists
-  if (searchForm && searchInput) {
+  if (searchForm !== null && searchInput !== null) {
     searchForm.addEventListener('submit', (e) => {
       void (async () => {
         e.preventDefault();
         const query = searchInput.value.trim();
 
-        if (query) {
+        if (query !== '') {
           await searchDocuments(query);
         }
       })();
@@ -96,20 +101,19 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // Logout button
-  if (logoutBtn) {
+  if (logoutBtn !== null) {
     logoutBtn.addEventListener('click', (e) => {
       void (async () => {
         e.preventDefault();
-        if (confirm('Möchten Sie sich wirklich abmelden?')) {
-          try {
-            // Import and use the logout function from auth module
-            const { logout } = await import('./auth.js');
-            await logout();
-          } catch (error) {
-            console.error('Logout error:', error);
-            // Fallback
-            window.location.href = '/login';
-          }
+        // Direct logout without confirmation
+        try {
+          // Import and use the logout function from auth module
+          const { logout } = await import('./auth.js');
+          await logout();
+        } catch (error) {
+          console.error('Logout error:', error);
+          // Fallback
+          window.location.href = '/login';
         }
       })();
     });
@@ -125,23 +129,9 @@ document.addEventListener('DOMContentLoaded', () => {
    * Search documents
    */
   async function searchDocuments(query: string): Promise<void> {
-    const token = getAuthToken();
-    if (!token) return;
-
     try {
-      const response = await fetch(`/api/documents/search?query=${encodeURIComponent(query)}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (response.ok) {
-        const documents: Document[] = await response.json();
-        displayDocuments(documents);
-      } else {
-        const error = await response.json();
-        showError(error.message ?? 'Fehler bei der Dokumentensuche');
-      }
+      const documents = await apiClient.get<Document[]>(`/documents/search?query=${encodeURIComponent(query)}`);
+      displayDocuments(documents);
     } catch (error) {
       console.error('Fehler bei der Dokumentensuche:', error);
       showError('Ein Fehler ist aufgetreten. Bitte versuchen Sie es später erneut.');
@@ -152,23 +142,9 @@ document.addEventListener('DOMContentLoaded', () => {
    * Load employee information
    */
   async function loadEmployeeInfo(): Promise<void> {
-    const token = getAuthToken();
-    if (!token) return;
-
     try {
-      const response = await fetch('/api/user/profile', {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (response.ok) {
-        const employeeInfo: EmployeeInfo = await response.json();
-        displayEmployeeInfo(employeeInfo);
-      } else {
-        const error = await response.json();
-        showError(error.message ?? 'Fehler beim Laden der Mitarbeiterinformationen');
-      }
+      const employeeInfo = await apiClient.get<EmployeeInfo>('/user/profile');
+      displayEmployeeInfo(employeeInfo);
     } catch (error) {
       console.error('Fehler beim Laden der Mitarbeiterinformationen:', error);
       showError('Ein Fehler ist aufgetreten. Bitte versuchen Sie es später erneut.');
@@ -184,7 +160,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const employeeName = document.getElementById('employee-name');
       if (employeeName) {
         const fullName = `${info.first_name ?? ''} ${info.last_name ?? ''}`.trim();
-        employeeName.textContent = fullName ?? info.username;
+        employeeName.textContent = fullName !== '' ? fullName : info.username;
       }
 
       // Update username in welcome message
@@ -199,9 +175,9 @@ document.addEventListener('DOMContentLoaded', () => {
         employeeDetails.innerHTML = `
           <p><strong>Name:</strong> ${escapeHtml(info.first_name ?? '')} ${escapeHtml(info.last_name ?? '')}</p>
           <p><strong>E-Mail:</strong> ${escapeHtml(info.email)}</p>
-          ${info.department ? `<p><strong>Abteilung:</strong> ${escapeHtml(info.department)}</p>` : ''}
-          ${info.team ? `<p><strong>Team:</strong> ${escapeHtml(info.team)}</p>` : ''}
-          ${info.position ? `<p><strong>Position:</strong> ${escapeHtml(info.position)}</p>` : ''}
+          ${info.department !== undefined && info.department !== '' ? `<p><strong>Abteilung:</strong> ${escapeHtml(info.department)}</p>` : ''}
+          ${info.team !== undefined && info.team !== '' ? `<p><strong>Team:</strong> ${escapeHtml(info.team)}</p>` : ''}
+          ${info.position !== undefined && info.position !== '' ? `<p><strong>Position:</strong> ${escapeHtml(info.position)}</p>` : ''}
         `;
       }
 
@@ -219,22 +195,9 @@ document.addEventListener('DOMContentLoaded', () => {
    * Load employee documents
    */
   async function loadDocuments(): Promise<void> {
-    const token = getAuthToken();
-    if (!token) return;
-
     try {
-      const response = await fetch('/api/documents/my-documents', {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (response.ok) {
-        const documents: Document[] = await response.json();
-        displayDocuments(documents);
-      } else {
-        console.error('Fehler beim Laden der Dokumente');
-      }
+      const documents = await apiClient.get<Document[]>('/documents/my-documents');
+      displayDocuments(documents);
     } catch (error) {
       console.error('Fehler beim Laden der Dokumente:', error);
     }
@@ -244,7 +207,7 @@ document.addEventListener('DOMContentLoaded', () => {
    * Display documents in table
    */
   function displayDocuments(documents: Document[]): void {
-    if (!documentTableBody) return;
+    if (documentTableBody === null) return;
 
     if (documents.length === 0) {
       documentTableBody.innerHTML = `

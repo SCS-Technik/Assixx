@@ -20,6 +20,7 @@
         document.documentElement.style.setProperty('--card-padding', sidebarCollapsed ? '2rem' : '1.5rem');
       })();
     </script>
+    <script src="/feature-flags.js"></script>
     <meta http-equiv="refresh" content="0; url=/pages/documents-search.html" />
     <!-- Dashboard Theme CSS -->
     <!-- Font Awesome -->
@@ -228,11 +229,11 @@
         right: 0;
         height: 3px;
         background: linear-gradient(90deg, var(--primary-color), var(--primary-light));
-        opacity: 0;
+        opacity: 0%;
       }
 
       .document-card:hover::before {
-        opacity: 1;
+        opacity: 100%;
       }
 
       .document-card:hover {
@@ -282,7 +283,7 @@
 
       .document-meta-item i {
         width: 16px;
-        opacity: 0.6;
+        opacity: 0%.6;
       }
 
       .document-badge {
@@ -315,7 +316,7 @@
 
       .empty-state i {
         font-size: 64px;
-        opacity: 0.3;
+        opacity: 0%.3;
         margin-bottom: var(--spacing-lg);
       }
 
@@ -422,7 +423,6 @@
         right: 0;
         background: rgba(18, 18, 18, 0.98);
         backdrop-filter: var(--glass-backdrop);
-        -webkit-backdrop-filter: var(--glass-backdrop);
         border: var(--glass-border);
         border-radius: var(--radius-md);
         box-shadow: var(--shadow-sm);
@@ -452,7 +452,7 @@
         display: flex;
         gap: var(--spacing-xl);
         margin-bottom: var(--spacing-lg);
-        padding: var(--spacing-md);
+        padding: var(--spacing-2sm);
         background: var(--glass-bg);
         border-radius: var(--radius-sm);
         border: 1px solid rgba(255, 255, 255, 0.05);
@@ -466,7 +466,7 @@
 
       .stat-item i {
         color: var(--primary-color);
-        opacity: 0.8;
+        opacity: 0%.8;
       }
 
       .stat-value {
@@ -530,7 +530,7 @@
 
       .modal-content {
         position: relative;
-        background: rgba(18, 18, 18, 0.95);
+        background: hsla(0, 0%, 8.2%, 0.84);
         backdrop-filter: var(--glass-backdrop);
         border: 1px solid hsla(0, 0%, 100%, 0.1);
         border-radius: var(--radius-md);
@@ -602,7 +602,7 @@
         background: var(--glass-bg);
         border: var(--glass-border);
         border-radius: var(--radius-md);
-        padding: var(--spacing-md);
+        padding: var(--spacing-2sm);
         margin-bottom: var(--spacing-lg);
       }
 
@@ -916,6 +916,9 @@
       window.location.href = '/documents-search';
     </script>
 
+    <!-- Unified Navigation -->
+    <script type="module" src="/scripts/components/unified-navigation.ts"></script>
+    <script type="module" src="/scripts/role-switch.ts"></script>
     <!-- Breadcrumb Component -->
     <script type="module" src="/scripts/components/breadcrumb.js"></script>
   </body>

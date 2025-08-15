@@ -59,9 +59,11 @@ class BlackboardService {
     userId: number,
   ): Promise<BlackboardEntry[]> {
     try {
-      const result = await getAllEntries(tenantId, userId, filters);
+      const result = (await getAllEntries(tenantId, userId, filters)) as {
+        entries: BlackboardEntry[];
+      };
       return result.entries;
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("Error in BlackboardService.getAll:", error);
       throw error;
     }
@@ -79,7 +81,7 @@ class BlackboardService {
     try {
       const entry = await getEntryById(id, tenantId, userId);
       return entry;
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("Error in BlackboardService.getById:", error);
       throw error;
     }
@@ -100,11 +102,11 @@ class BlackboardService {
         content: data.content,
         org_level: data.org_level,
         org_id: data.org_id,
-        author_id: data.author_id ?? data.created_by ?? 0,
+        author_id: data.author_id,
         expires_at:
           data.expires_at instanceof Date
             ? data.expires_at
-            : data.expires_at
+            : data.expires_at != null && data.expires_at !== ""
               ? new Date(data.expires_at)
               : undefined,
         priority: data.priority,
@@ -118,7 +120,7 @@ class BlackboardService {
         throw new Error("Failed to create blackboard entry");
       }
       return entry;
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("Error in BlackboardService.create:", error);
       throw error;
     }
@@ -140,16 +142,17 @@ class BlackboardService {
       // Convert expires_at to Date if it's a string
       const updateData = {
         ...modelData,
-        expires_at: modelData.expires_at
-          ? typeof modelData.expires_at === "string"
-            ? new Date(modelData.expires_at)
-            : modelData.expires_at
-          : undefined,
+        expires_at:
+          modelData.expires_at != null && modelData.expires_at !== ""
+            ? typeof modelData.expires_at === "string"
+              ? new Date(modelData.expires_at)
+              : modelData.expires_at
+            : undefined,
       };
 
       const entry = await updateEntry(id, updateData, tenantId);
       return entry;
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("Error in BlackboardService.update:", error);
       throw error;
     }
@@ -165,7 +168,7 @@ class BlackboardService {
   ): Promise<boolean> {
     try {
       return await deleteEntry(id, tenantId);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("Error in BlackboardService.delete:", error);
       throw error;
     }

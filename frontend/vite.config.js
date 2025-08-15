@@ -100,6 +100,7 @@ export default defineConfig({
         handler(html) {
           // Temporarily comment out external scripts to avoid warnings
           return html
+            .replace(/<script src="\/feature-flags\.js"[^>]*><\/script>/g, '<!-- EXTERNAL_FEATURE_FLAGS: $& -->')
             .replace(/<script src="\/scripts\/lib\/fullcalendar[^"]*"[^>]*><\/script>/g, '<!-- EXTERNAL_SCRIPT: $& -->')
             .replace(/<link[^>]*href="[^"]*fontawesome[^"]*\.css"[^>]*>/g, '<!-- EXTERNAL_STYLE: $& -->');
         },
@@ -112,6 +113,7 @@ export default defineConfig({
         handler(html) {
           // Restore external scripts after processing
           return html
+            .replace(/<!-- EXTERNAL_FEATURE_FLAGS: (<script[^>]*><\/script>) -->/g, '$1')
             .replace(/<!-- EXTERNAL_SCRIPT: (<script[^>]*><\/script>) -->/g, '$1')
             .replace(/<!-- EXTERNAL_STYLE: (<link[^>]*>) -->/g, '$1');
         },
@@ -124,11 +126,20 @@ export default defineConfig({
         const scriptsDir = resolve(__dirname, '../dist/scripts/lib');
         const stylesDir = resolve(__dirname, '../dist/styles/lib');
         const fontsDir = resolve(__dirname, '../dist/fonts');
+        const distDir = resolve(__dirname, '../dist');
 
         // Create directories if they don't exist
         if (!existsSync(scriptsDir)) mkdirSync(scriptsDir, { recursive: true });
         if (!existsSync(stylesDir)) mkdirSync(stylesDir, { recursive: true });
         if (!existsSync(fontsDir)) mkdirSync(fontsDir, { recursive: true });
+
+        // Copy feature-flags.js to dist
+        const featureFlagsSource = resolve(__dirname, 'public/feature-flags.js');
+        const featureFlagsDest = resolve(distDir, 'feature-flags.js');
+        if (existsSync(featureFlagsSource)) {
+          copyFileSync(featureFlagsSource, featureFlagsDest);
+          console.info('✅ Copied feature-flags.js to dist');
+        }
 
         // Copy FullCalendar JS files
         const fullcalendarSrc = resolve(__dirname, 'src/scripts/lib/fullcalendar.min.js');

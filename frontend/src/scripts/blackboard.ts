@@ -4,6 +4,7 @@
  */
 
 import type { User } from '../types/api.types';
+import { ApiClient } from '../utils/api-client';
 
 import { getAuthToken, showSuccess, showError } from './auth';
 import { escapeHtml } from './common';
@@ -89,13 +90,13 @@ interface UserData extends User {
 }
 
 // Global variables
-let currentPage: number = 1;
-let currentFilter: string = 'all';
-let currentSearch: string = '';
-let currentSort: string = 'created_at|DESC';
+let currentPage = 1;
+let currentFilter = 'all';
+let currentSearch = '';
+let currentSort = 'created_at|DESC';
 let departments: Department[] = [];
 let teams: Team[] = [];
-let isAdmin: boolean = false;
+let isAdmin = false;
 let currentUserId: number | null = null;
 let selectedFiles: File[] = [];
 let directAttachmentFile: File | null = null;
@@ -168,7 +169,7 @@ function closeModal(modalId: string): void {
 
 // Initialize when document is ready
 // Globale Variable, um zu verhindern, dass Endlosanfragen gesendet werden
-let entriesLoadingEnabled: boolean = false;
+let entriesLoadingEnabled = false;
 
 // Function to initialize blackboard
 function initializeBlackboard() {
@@ -181,7 +182,7 @@ function initializeBlackboard() {
   // Note: previewAttachment will be available after this module loads completely
 
   // Debug: Log when this script loads
-  console.log('[Blackboard] Script loaded at:', new Date().toISOString());
+  console.info('[Blackboard] Script loaded at:', new Date().toISOString());
 
   // Check if user is logged in
   checkLoggedIn()
@@ -190,23 +191,23 @@ function initializeBlackboard() {
 
       // Get user data from localStorage instead of fetching again
       const storedUser = localStorage.getItem('currentUser');
-      if (storedUser) {
+      if (storedUser !== null && storedUser.length > 0) {
         try {
-          const userData = JSON.parse(storedUser);
+          const userData = JSON.parse(storedUser) as UserData;
           currentUserId = userData.id;
           isAdmin = userData.role === 'admin' || userData.role === 'root';
 
-          console.log('[Blackboard] User data from localStorage:', userData);
-          console.log('[Blackboard] isAdmin:', isAdmin);
-          console.log('[Blackboard] User role:', userData.role);
+          console.info('[Blackboard] User data from localStorage:', userData);
+          console.info('[Blackboard] isAdmin:', isAdmin);
+          console.info('[Blackboard] User role:', userData.role);
 
           // Show/hide "New Entry" button based on permissions
           const newEntryBtn = document.getElementById('newEntryBtn') as HTMLButtonElement | null;
           if (newEntryBtn) {
-            console.log('[Blackboard] Setting newEntryBtn display:', isAdmin ? 'inline-flex' : 'none');
+            console.info('[Blackboard] Setting newEntryBtn display:', isAdmin ? 'inline-flex' : 'none');
             newEntryBtn.style.display = isAdmin ? 'inline-flex' : 'none';
           } else {
-            console.log('[Blackboard] newEntryBtn not found!');
+            console.info('[Blackboard] newEntryBtn not found!');
           }
 
           // Load departments and teams for form dropdowns
@@ -219,21 +220,21 @@ function initializeBlackboard() {
               currentUserId = userData.id;
               isAdmin = userData.role === 'admin' || userData.role === 'root';
 
-              console.log('[Blackboard] User data from API:', userData);
-              console.log('[Blackboard] isAdmin after API call:', isAdmin);
-              console.log('[Blackboard] User role from API:', userData.role);
+              console.info('[Blackboard] User data from API:', userData);
+              console.info('[Blackboard] isAdmin after API call:', isAdmin);
+              console.info('[Blackboard] User role from API:', userData.role);
 
               const newEntryBtn = document.getElementById('newEntryBtn') as HTMLButtonElement | null;
               if (newEntryBtn) {
-                console.log('[Blackboard] Setting newEntryBtn display after API:', isAdmin ? 'inline-flex' : 'none');
+                console.info('[Blackboard] Setting newEntryBtn display after API:', isAdmin ? 'inline-flex' : 'none');
                 newEntryBtn.style.display = isAdmin ? 'inline-flex' : 'none';
               } else {
-                console.log('[Blackboard] newEntryBtn not found after API call!');
+                console.info('[Blackboard] newEntryBtn not found after API call!');
               }
               void loadDepartmentsAndTeams();
             })
-            .catch((error) => {
-              console.error('[Blackboard] Error loading user data:', error);
+            .catch((err1: unknown) => {
+              console.error('[Blackboard] Error loading user data:', err1);
               showError('Fehler beim Laden der Benutzerdaten');
             });
         }
@@ -244,24 +245,24 @@ function initializeBlackboard() {
             currentUserId = userData.id;
             isAdmin = userData.role === 'admin' || userData.role === 'root';
 
-            console.log('[Blackboard] No localStorage - User data from API:', userData);
-            console.log('[Blackboard] No localStorage - isAdmin:', isAdmin);
-            console.log('[Blackboard] No localStorage - User role:', userData.role);
+            console.info('[Blackboard] No localStorage - User data from API:', userData);
+            console.info('[Blackboard] No localStorage - isAdmin:', isAdmin);
+            console.info('[Blackboard] No localStorage - User role:', userData.role);
 
             const newEntryBtn = document.getElementById('newEntryBtn') as HTMLButtonElement | null;
             if (newEntryBtn) {
-              console.log(
+              console.info(
                 '[Blackboard] No localStorage - Setting newEntryBtn display:',
                 isAdmin ? 'inline-flex' : 'none',
               );
               newEntryBtn.style.display = isAdmin ? 'inline-flex' : 'none';
             } else {
-              console.log('[Blackboard] No localStorage - newEntryBtn not found!');
+              console.info('[Blackboard] No localStorage - newEntryBtn not found!');
             }
             void loadDepartmentsAndTeams();
           })
-          .catch((error) => {
-            console.error('[Blackboard] Error loading user data:', error);
+          .catch((err2: unknown) => {
+            console.error('[Blackboard] Error loading user data:', err2);
             showError('Fehler beim Laden der Benutzerdaten');
           });
       }
@@ -273,7 +274,7 @@ function initializeBlackboard() {
         const urlParams = new URLSearchParams(window.location.search);
         const entryId = urlParams.get('entry');
 
-        if (entryId) {
+        if (entryId !== null && entryId.length > 0) {
           // If we have an entry ID, scroll to the specific one
           const entryElement = document.querySelector(`[data-entry-id="${entryId}"]`);
           if (entryElement) {
@@ -305,7 +306,7 @@ function initializeBlackboard() {
       // Setup event listeners
       setupEventListeners();
     })
-    .catch((error) => {
+    .catch((error: unknown) => {
       console.error('Error checking login:', error);
       window.location.href = '/login';
     });
@@ -327,7 +328,7 @@ function setupCloseButtons(): void {
   document.querySelectorAll<HTMLElement>('[data-action="close"]').forEach((button) => {
     button.addEventListener('click', function (this: HTMLElement) {
       // Finde das übergeordnete Modal (both modal-overlay and modal classes)
-      const modal = this.closest('.modal-overlay, .modal') as HTMLElement | null;
+      const modal = this.closest('.modal-overlay, .modal');
       if (modal) {
         closeModal(modal.id);
       } else {
@@ -355,7 +356,9 @@ function setupEventListeners(): void {
   document.querySelectorAll<HTMLElement>('.filter-pill[data-value]').forEach((button) => {
     button.addEventListener('click', function (this: HTMLElement) {
       // Remove active class from all pills
-      document.querySelectorAll('.filter-pill').forEach((pill) => pill.classList.remove('active'));
+      document.querySelectorAll('.filter-pill').forEach((pill) => {
+        pill.classList.remove('active');
+      });
       // Add active class to clicked pill
       this.classList.add('active');
 
@@ -458,7 +461,9 @@ function setupEventListeners(): void {
   document.querySelectorAll<HTMLElement>('.color-option').forEach((button) => {
     button.addEventListener('click', function (this: HTMLElement) {
       // Remove active class from all color options
-      document.querySelectorAll('.color-option').forEach((option) => option.classList.remove('active'));
+      document.querySelectorAll('.color-option').forEach((option) => {
+        option.classList.remove('active');
+      });
       // Add active class to clicked option
       this.classList.add('active');
     });
@@ -648,20 +653,45 @@ async function loadEntries(): Promise<void> {
 
     // Get token from localStorage
     const token = getAuthToken();
-    if (!token) {
+    if (token === null || token.length === 0) {
       window.location.href = '/login';
       throw new Error('No token found');
     }
 
-    // Fetch entries with authentication token
-    const response = await fetch(
-      `/api/blackboard?page=${currentPage}&filter=${currentFilter}&search=${encodeURIComponent(currentSearch)}&sortBy=${sortBy}&sortDir=${sortDir}`,
-      {
+    // Use API client for v2 migration
+    const apiClient = ApiClient.getInstance();
+    // v2 API uses /blackboard/entries instead of /blackboard
+    const useV2 = window.FEATURE_FLAGS?.USE_API_V2_BLACKBOARD ?? false;
+    const endpoint = useV2
+      ? `/blackboard/entries?page=${currentPage}&filter=${currentFilter}&search=${encodeURIComponent(currentSearch)}&sortBy=${sortBy}&sortDir=${sortDir}`
+      : `/blackboard?page=${currentPage}&filter=${currentFilter}&search=${encodeURIComponent(currentSearch)}&sortBy=${sortBy}&sortDir=${sortDir}`;
+
+    // Check feature flag
+    let response: Response | { ok: boolean; status: number; json: () => Promise<unknown> };
+
+    if (useV2) {
+      try {
+        const data = await apiClient.request(endpoint, { method: 'GET' }, { version: 'v2' });
+        // Create a mock response for v2 to match v1 interface
+        response = {
+          ok: true,
+          status: 200,
+          json: async () => Promise.resolve(data),
+        };
+      } catch (error) {
+        response = {
+          ok: false,
+          status: (error as { status?: number }).status ?? 500,
+          json: async () => Promise.resolve(error),
+        };
+      }
+    } else {
+      response = await fetch(`/api${endpoint}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
-      },
-    );
+      });
+    }
 
     if (!response.ok) {
       if (response.status === 401) {
@@ -672,16 +702,14 @@ async function loadEntries(): Promise<void> {
       throw new Error('Failed to load entries');
     }
 
-    const responseData = await response.json();
+    const responseData = (await response.json()) as { data?: BlackboardResponse } & BlackboardResponse;
     const data: BlackboardResponse = responseData.data ?? responseData;
 
     // Update pagination
-    if (data.pagination) {
-      updatePagination(data.pagination);
-    }
+    updatePagination(data.pagination);
 
     // Display entries
-    displayEntries(data.entries || []);
+    displayEntries(data.entries);
 
     // Erfolgreiche Anfrage - deaktiviere weitere automatische API-Aufrufe
     entriesLoadingEnabled = false;
@@ -710,16 +738,30 @@ async function loadEntries(): Promise<void> {
  */
 async function checkLoggedIn(): Promise<void> {
   const token = getAuthToken();
-  if (!token) {
+  if (token === null || token.length === 0) {
     throw new Error('No authentication token found');
   }
 
-  // Verify token is valid
-  const response = await fetch('/api/user/profile', {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
+  // Use API client for v2 migration
+  const apiClient = ApiClient.getInstance();
+  const useV2 = window.FEATURE_FLAGS?.USE_API_V2_USERS ?? false;
+  const endpoint = useV2 ? '/users/me' : '/user/profile';
+
+  let response: Response | { ok: boolean };
+  if (useV2) {
+    try {
+      await apiClient.request(endpoint, { method: 'GET' }, { version: 'v2' });
+      response = { ok: true };
+    } catch {
+      response = { ok: false };
+    }
+  } else {
+    response = await fetch(`/api${endpoint}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+  }
 
   if (!response.ok) {
     throw new Error('Invalid token');
@@ -731,23 +773,32 @@ async function checkLoggedIn(): Promise<void> {
  */
 async function fetchUserData(): Promise<UserData> {
   const token = getAuthToken();
-  if (!token) {
+  if (token === null || token.length === 0) {
     throw new Error('No authentication token found');
   }
 
-  const response = await fetch('/api/user/profile', {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
+  const apiClient = ApiClient.getInstance();
+  const useV2 = window.FEATURE_FLAGS?.USE_API_V2_USERS ?? false;
+  const endpoint = useV2 ? '/users/me' : '/user/profile';
 
-  if (!response.ok) {
-    throw new Error('Failed to fetch user data');
+  if (useV2) {
+    const result = await apiClient.request<UserData>(endpoint, { method: 'GET' }, { version: 'v2' });
+    return result;
+  } else {
+    const response = await fetch(`/api${endpoint}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch user data');
+    }
+
+    const result = (await response.json()) as { data?: UserData } & UserData;
+    // API returns { success: true, data: {...} }, we need just the data
+    return result.data ?? result;
   }
-
-  const result = await response.json();
-  // API returns { success: true, data: {...} }, we need just the data
-  return result.data ?? result;
 }
 
 // loadHeaderUserInfo function removed - now handled by unified navigation
@@ -757,29 +808,49 @@ async function fetchUserData(): Promise<UserData> {
  */
 async function loadDepartmentsAndTeams(): Promise<void> {
   const token = getAuthToken();
-  if (!token) return;
+  if (token === null || token.length === 0) return;
 
   try {
-    // Load departments
-    const deptResponse = await fetch('/api/departments', {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
+    const apiClient = ApiClient.getInstance();
+    const useDeptV2 = window.FEATURE_FLAGS?.USE_API_V2_DEPARTMENTS ?? false;
+    const useTeamV2 = window.FEATURE_FLAGS?.USE_API_V2_TEAMS ?? false;
 
-    if (deptResponse.ok) {
-      departments = await deptResponse.json();
+    // Load departments
+    if (useDeptV2) {
+      try {
+        departments = await apiClient.request<Department[]>('/departments', { method: 'GET' }, { version: 'v2' });
+      } catch (error) {
+        console.error('Error loading departments v2:', error);
+      }
+    } else {
+      const deptResponse = await fetch('/api/departments', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (deptResponse.ok) {
+        departments = (await deptResponse.json()) as Department[];
+      }
     }
 
     // Load teams
-    const teamResponse = await fetch('/api/teams', {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
+    if (useTeamV2) {
+      try {
+        teams = await apiClient.request<Team[]>('/teams', { method: 'GET' }, { version: 'v2' });
+      } catch (error) {
+        console.error('Error loading teams v2:', error);
+      }
+    } else {
+      const teamResponse = await fetch('/api/teams', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
-    if (teamResponse.ok) {
-      teams = await teamResponse.json();
+      if (teamResponse.ok) {
+        teams = (await teamResponse.json()) as Team[];
+      }
     }
   } catch (error) {
     console.error('Error loading departments and teams:', error);
@@ -827,7 +898,7 @@ function createEntryCard(entry: BlackboardEntry): HTMLElement {
 
   // Determine card type based on priority or content
   let cardClass = 'pinboard-sticky';
-  let cardColor = entry.color ?? 'yellow';
+  let cardColor = entry.color;
 
   // High priority items get info box style
   if (entry.priority_level === 'high' || entry.priority_level === 'critical') {
@@ -838,7 +909,7 @@ function createEntryCard(entry: BlackboardEntry): HTMLElement {
     cardClass = 'pinboard-note';
   }
 
-  const canEdit = isAdmin ?? entry.created_by === currentUserId;
+  const canEdit = isAdmin || entry.created_by === currentUserId;
   const priorityIcon = getPriorityIcon(entry.priority_level);
 
   // Check if this is a direct attachment
@@ -846,7 +917,7 @@ function createEntryCard(entry: BlackboardEntry): HTMLElement {
   let attachmentSize = 'medium';
 
   if (isDirectAttachment) {
-    const sizeMatch = entry.content.match(/\[Attachment:(small|medium|large)\]/);
+    const sizeMatch = /\[Attachment:(small|medium|large)\]/.exec(entry.content);
     if (sizeMatch) {
       attachmentSize = sizeMatch[1];
     }
@@ -872,8 +943,8 @@ function createEntryCard(entry: BlackboardEntry): HTMLElement {
     if (isImage) {
       contentHtml = `
         <div class="pinboard-image" style="${sizeStyle} margin: 0 auto;">
-          <img src="/api/blackboard/attachments/${attachment.id}/preview" 
-               alt="${escapeHtml(attachment.original_name)}" 
+          <img src="/api/blackboard/attachments/${attachment.id}/preview"
+               alt="${escapeHtml(attachment.original_name)}"
                style="width: 100%; height: 100%; object-fit: contain; border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);"
                onclick="event.stopPropagation(); previewAttachment(${attachment.id}, '${escapeJsString(attachment.mime_type)}', '${escapeJsString(attachment.original_name)}')">
         </div>
@@ -887,8 +958,8 @@ function createEntryCard(entry: BlackboardEntry): HTMLElement {
         <div class="pinboard-pdf-preview" style="${sizeStyle} height: ${containerHeight}px; position: relative; overflow: hidden; background: white; border-radius: 8px; border: 1px solid #ddd;">
           <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; overflow: hidden;">
             <div style="transform: scale(${scale}); transform-origin: top left; width: ${100 / scale}%; height: ${100 / scale}%;">
-              <object 
-                data="/api/blackboard/attachments/${attachment.id}/preview#view=FitH&toolbar=0&navpanes=0&scrollbar=0" 
+              <object
+                data="/api/blackboard/attachments/${attachment.id}/preview#view=FitH&toolbar=0&navpanes=0&scrollbar=0"
                 type="application/pdf"
                 style="width: 100%; height: 100%; border: none;">
                 <div style="padding: 20px; text-align: center;">
@@ -898,7 +969,7 @@ function createEntryCard(entry: BlackboardEntry): HTMLElement {
               </object>
             </div>
           </div>
-          <div class="pdf-overlay" 
+          <div class="pdf-overlay"
                style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; cursor: pointer; z-index: 10;"
                onclick="event.stopPropagation(); previewAttachment(${attachment.id}, '${escapeJsString(attachment.mime_type)}', '${escapeJsString(attachment.original_name)}')"
                title="Klicken für Vollansicht">
@@ -922,15 +993,15 @@ function createEntryCard(entry: BlackboardEntry): HTMLElement {
   container.innerHTML = `
     <div class="${cardClass} ${cardClass === 'pinboard-sticky' ? `color-${cardColor}` : ''} ${randomRotation}" data-entry-id="${entry.id}" onclick="viewEntry(${entry.id})" style="cursor: pointer;">
       <div class="pushpin ${randomPushpin}"></div>
-      
+
       <h4 style="margin: 0 0 10px 0; font-weight: 600; color:rgb(0, 0, 0);">
         ${priorityIcon} ${escapeHtml(entry.title)}
       </h4>
-      
+
       ${contentHtml}
-      
+
       ${
-        !isDirectAttachment && entry.attachment_count && entry.attachment_count > 0
+        !isDirectAttachment && entry.attachment_count !== undefined && entry.attachment_count > 0
           ? `
         <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(0,0,0,0.1);">
           <i class="fas fa-paperclip" style="color: #666;"></i>
@@ -939,20 +1010,20 @@ function createEntryCard(entry: BlackboardEntry): HTMLElement {
       `
           : ''
       }
-      
+
       <div style="font-size: 12px; color: #000; display: flex; justify-content: space-between; align-items: center;">
         <span>
-          <i class="fas fa-user" style="opacity: 0.6;"></i> ${escapeHtml(entry.author_full_name ?? entry.author_name ?? 'Unknown')}
+          <i class="fas fa-user" style="opacity: 0%.6;"></i> ${escapeHtml(entry.author_full_name ?? entry.author_name ?? 'Unknown')}
         </span>
         <span>
           ${formatDate(entry.created_at)}
         </span>
       </div>
-      
+
       ${
         canEdit
           ? `
-        <div class="entry-actions" style="position: absolute; top: 10px; right: 10px; opacity: 0; /* transition: opacity 0.2s; */">
+        <div class="entry-actions" style="position: absolute; top: 10px; right: 10px; opacity: 0%; /* transition: opacity 0.2s; */">
           <button class="btn btn-sm btn-link p-1" onclick="event.stopPropagation(); editEntry(${entry.id})" title="Bearbeiten">
             <i class="fas fa-edit"></i>
           </button>
@@ -968,15 +1039,15 @@ function createEntryCard(entry: BlackboardEntry): HTMLElement {
 
   // Show actions on hover
   if (canEdit) {
-    const card = container.querySelector(`.${cardClass}`) as HTMLElement | null;
+    const card = container.querySelector(`.${cardClass}`);
     if (card) {
       card.addEventListener('mouseenter', () => {
-        const actions = card.querySelector('.entry-actions') as HTMLElement | null;
-        if (actions) actions.style.opacity = '1';
+        const actions = card.querySelector('.entry-actions');
+        if (actions) (actions as HTMLElement).style.opacity = '1';
       });
       card.addEventListener('mouseleave', () => {
-        const actions = card.querySelector('.entry-actions') as HTMLElement | null;
-        if (actions) actions.style.opacity = '0';
+        const actions = card.querySelector('.entry-actions');
+        if (actions) (actions as HTMLElement).style.opacity = '0';
       });
     }
   }
@@ -1013,7 +1084,9 @@ function updatePagination(pagination: PaginationInfo): void {
     const prevBtn = document.createElement('button');
     prevBtn.className = 'btn btn-sm btn-secondary';
     prevBtn.innerHTML = '<i class="fas fa-chevron-left"></i>';
-    prevBtn.onclick = () => changePage(currentPage - 1);
+    prevBtn.onclick = () => {
+      changePage(currentPage - 1);
+    };
     paginationContainer.appendChild(prevBtn);
   }
 
@@ -1023,7 +1096,9 @@ function updatePagination(pagination: PaginationInfo): void {
       const pageBtn = document.createElement('button');
       pageBtn.className = `btn btn-sm ${i === currentPage ? 'btn-primary' : 'btn-secondary'}`;
       pageBtn.textContent = i.toString();
-      pageBtn.onclick = () => changePage(i);
+      pageBtn.onclick = () => {
+        changePage(i);
+      };
       paginationContainer.appendChild(pageBtn);
     } else if (i === currentPage - 3 || i === currentPage + 3) {
       const dots = document.createElement('span');
@@ -1038,7 +1113,9 @@ function updatePagination(pagination: PaginationInfo): void {
     const nextBtn = document.createElement('button');
     nextBtn.className = 'btn btn-sm btn-secondary';
     nextBtn.innerHTML = '<i class="fas fa-chevron-right"></i>';
-    nextBtn.onclick = () => changePage(currentPage + 1);
+    nextBtn.onclick = () => {
+      changePage(currentPage + 1);
+    };
     paginationContainer.appendChild(nextBtn);
   }
 }
@@ -1077,7 +1154,7 @@ function openEntryForm(entryId?: number): void {
     fileInput.value = '';
   }
 
-  if (entryId) {
+  if (entryId !== undefined && entryId !== 0) {
     // Load entry data for editing
     void loadEntryForEdit(entryId);
   } else {
@@ -1141,10 +1218,10 @@ async function saveEntry(): Promise<void> {
 
   const formData = new FormData(form);
   const token = getAuthToken();
-  if (!token) return;
+  if (token === null || token.length === 0) return;
 
   // Get selected color
-  const selectedColor = document.querySelector('.color-option.active') as HTMLElement | null;
+  const selectedColor = document.querySelector<HTMLElement>('.color-option.active');
   const color = selectedColor?.dataset.color ?? '#f8f9fa';
 
   const entryData = {
@@ -1152,34 +1229,60 @@ async function saveEntry(): Promise<void> {
     content: formData.get('content') as string,
     priority_level: formData.get('priority_level') as string,
     org_level: formData.get('org_level') as string,
-    org_id: formData.get('org_level') === 'all' ? null : parseInt(formData.get('org_id') as string),
+    org_id: formData.get('org_level') === 'all' ? null : parseInt(formData.get('org_id') as string, 10),
     color,
   };
 
   try {
+    const apiClient = ApiClient.getInstance();
+    const useV2 = window.FEATURE_FLAGS?.USE_API_V2_BLACKBOARD ?? false;
     const entryId = formData.get('entry_id') as string;
-    const url = entryId ? `/api/blackboard/${entryId}` : '/api/blackboard';
-    const method = entryId ? 'PUT' : 'POST';
+    const endpoint = useV2
+      ? entryId.length > 0
+        ? `/blackboard/entries/${entryId}`
+        : '/blackboard/entries'
+      : entryId.length > 0
+        ? `/blackboard/${entryId}`
+        : '/blackboard';
+    const method = entryId.length > 0 ? 'PUT' : 'POST';
 
-    const response = await fetch(url, {
-      method,
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify(entryData),
-    });
+    let response: { ok: boolean; json: () => Promise<unknown> };
+    if (useV2) {
+      try {
+        const data = await apiClient.request(
+          endpoint,
+          {
+            method,
+            body: JSON.stringify(entryData),
+          },
+          { version: 'v2' },
+        );
+        response = { ok: true, json: async () => Promise.resolve(data) };
+      } catch (error) {
+        response = { ok: false, json: async () => Promise.resolve(error) };
+      }
+    } else {
+      const url = entryId.length > 0 ? `/api/blackboard/${entryId}` : '/api/blackboard';
+      response = await fetch(url, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(entryData),
+      });
+    }
 
     if (response.ok) {
-      const savedEntry = await response.json();
+      const savedEntry = (await response.json()) as { id: number };
 
       // Upload attachments if any
-      if (selectedFiles.length > 0 && !entryId) {
+      if (selectedFiles.length > 0 && entryId.length === 0) {
         // Only upload attachments for new entries
         await uploadAttachments(savedEntry.id);
       }
 
-      showSuccess(entryId ? 'Eintrag erfolgreich aktualisiert!' : 'Eintrag erfolgreich erstellt!');
+      showSuccess(entryId.length > 0 ? 'Eintrag erfolgreich aktualisiert!' : 'Eintrag erfolgreich erstellt!');
       closeModal('entryFormModal');
 
       // Clear selected files
@@ -1189,7 +1292,7 @@ async function saveEntry(): Promise<void> {
       entriesLoadingEnabled = true;
       void loadEntries();
     } else {
-      const error = await response.json();
+      const error = (await response.json()) as { message?: string };
       showError(error.message ?? 'Fehler beim Speichern des Eintrags');
     }
   } catch (error) {
@@ -1203,44 +1306,53 @@ async function saveEntry(): Promise<void> {
  */
 async function loadEntryForEdit(entryId: number): Promise<void> {
   const token = getAuthToken();
-  if (!token) return;
+  if (token === null || token.length === 0) return;
 
   try {
-    const response = await fetch(`/api/blackboard/${entryId}`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
+    const apiClient = ApiClient.getInstance();
+    const useV2 = window.FEATURE_FLAGS?.USE_API_V2_BLACKBOARD ?? false;
+    const endpoint = useV2 ? `/blackboard/entries/${entryId}` : `/blackboard/${entryId}`;
 
-    if (response.ok) {
-      const entry: BlackboardEntry = await response.json();
-
-      // Fill form with entry data
-      const form = document.getElementById('entryForm') as HTMLFormElement | null;
-      if (!form) return;
-
-      (form.elements.namedItem('entry_id') as HTMLInputElement).value = entry.id.toString();
-      (form.elements.namedItem('title') as HTMLInputElement).value = entry.title;
-      (form.elements.namedItem('content') as HTMLTextAreaElement).value = entry.content;
-      (form.elements.namedItem('priority_level') as HTMLSelectElement).value = entry.priority_level;
-      (form.elements.namedItem('org_level') as HTMLSelectElement).value = entry.org_level;
-
-      // Update org dropdown
-      updateOrgIdDropdown(entry.org_level);
-      if (entry.org_id) {
-        (form.elements.namedItem('org_id') as HTMLSelectElement).value = entry.org_id.toString();
-      }
-
-      // Select color
-      document.querySelectorAll('.color-option').forEach((option) => {
-        option.classList.remove('active');
-      });
-      const colorOption = document.querySelector(`.color-option[data-color="${entry.color}"]`) as HTMLElement | null;
-      if (colorOption) {
-        colorOption.classList.add('active');
-      }
+    let entry: BlackboardEntry;
+    if (useV2) {
+      entry = await apiClient.request<BlackboardEntry>(endpoint, { method: 'GET' }, { version: 'v2' });
     } else {
-      showError('Fehler beim Laden des Eintrags');
+      const response = await fetch(`/api${endpoint}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        showError('Fehler beim Laden des Eintrags');
+        return;
+      }
+      entry = (await response.json()) as BlackboardEntry;
+    }
+
+    // Fill form with entry data
+    const form = document.getElementById('entryForm') as HTMLFormElement | null;
+    if (!form) return;
+
+    (form.elements.namedItem('entry_id') as HTMLInputElement).value = entry.id.toString();
+    (form.elements.namedItem('title') as HTMLInputElement).value = entry.title;
+    (form.elements.namedItem('content') as HTMLTextAreaElement).value = entry.content;
+    (form.elements.namedItem('priority_level') as HTMLSelectElement).value = entry.priority_level;
+    (form.elements.namedItem('org_level') as HTMLSelectElement).value = entry.org_level;
+
+    // Update org dropdown
+    updateOrgIdDropdown(entry.org_level);
+    if (entry.org_id !== undefined && entry.org_id !== 0) {
+      (form.elements.namedItem('org_id') as HTMLSelectElement).value = entry.org_id.toString();
+    }
+
+    // Select color
+    document.querySelectorAll('.color-option').forEach((option) => {
+      option.classList.remove('active');
+    });
+    const colorOption = document.querySelector(`.color-option[data-color="${entry.color}"]`);
+    if (colorOption) {
+      colorOption.classList.add('active');
     }
   } catch (error) {
     console.error('Error loading entry:', error);
@@ -1255,7 +1367,7 @@ async function uploadAttachments(entryId: number): Promise<void> {
   if (selectedFiles.length === 0) return;
 
   const token = getAuthToken();
-  if (!token) return;
+  if (token === null || token.length === 0) return;
 
   const formData = new FormData();
   selectedFiles.forEach((file) => {
@@ -1263,16 +1375,37 @@ async function uploadAttachments(entryId: number): Promise<void> {
   });
 
   try {
-    const response = await fetch(`/api/blackboard/${entryId}/attachments`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-      body: formData,
-    });
+    const apiClient = ApiClient.getInstance();
+    const useV2 = window.FEATURE_FLAGS?.USE_API_V2_BLACKBOARD ?? false;
+    const endpoint = useV2 ? `/blackboard/entries/${entryId}/attachments` : `/blackboard/${entryId}/attachments`;
+
+    let response: { ok: boolean; json: () => Promise<unknown> };
+    if (useV2) {
+      try {
+        await apiClient.request(
+          endpoint,
+          {
+            method: 'POST',
+            body: formData,
+          },
+          { version: 'v2', contentType: '' },
+        );
+        response = { ok: true, json: async () => Promise.resolve({}) };
+      } catch (error) {
+        response = { ok: false, json: async () => Promise.resolve(error) };
+      }
+    } else {
+      response = await fetch(`/api${endpoint}`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
+      });
+    }
 
     if (!response.ok) {
-      const error = await response.json();
+      const error = (await response.json()) as { message?: string };
       showError(error.message ?? 'Fehler beim Hochladen der Anhänge');
     }
   } catch (error) {
@@ -1286,17 +1419,27 @@ async function uploadAttachments(entryId: number): Promise<void> {
  */
 async function loadAttachments(entryId: number): Promise<BlackboardAttachment[]> {
   const token = getAuthToken();
-  if (!token) return [];
+  if (token === null || token === '') {
+    return [];
+  }
 
   try {
-    const response = await fetch(`/api/blackboard/${entryId}/attachments`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
+    const apiClient = ApiClient.getInstance();
+    const useV2 = window.FEATURE_FLAGS?.USE_API_V2_BLACKBOARD ?? false;
+    const endpoint = useV2 ? `/blackboard/entries/${entryId}/attachments` : `/blackboard/${entryId}/attachments`;
 
-    if (response.ok) {
-      return await response.json();
+    if (useV2) {
+      return await apiClient.request<BlackboardAttachment[]>(endpoint, { method: 'GET' }, { version: 'v2' });
+    } else {
+      const response = await fetch(`/api${endpoint}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        return (await response.json()) as BlackboardAttachment[];
+      }
     }
   } catch (error) {
     console.error('Error loading attachments:', error);
@@ -1306,30 +1449,91 @@ async function loadAttachments(entryId: number): Promise<BlackboardAttachment[]>
 }
 
 /**
- * Delete entry
+ * Show delete confirmation modal
  */
-async function deleteEntry(entryId: number): Promise<void> {
-  if (!confirm('Möchten Sie diesen Eintrag wirklich löschen?')) {
-    return;
+function showDeleteConfirmation(entryId: number): void {
+  // Create confirmation modal if it doesn't exist
+  let confirmModal = document.getElementById('deleteConfirmModal');
+  if (!confirmModal) {
+    confirmModal = document.createElement('div');
+    confirmModal.id = 'deleteConfirmModal';
+    confirmModal.className = 'modal';
+    confirmModal.innerHTML = `
+      <div class="modal-content" style="max-width: 400px;">
+        <div class="modal-header">
+          <h3 class="modal-title">Eintrag löschen</h3>
+          <button class="modal-close" onclick="closeModal('deleteConfirmModal')">&times;</button>
+        </div>
+        <div class="modal-body">
+          <p>Möchten Sie diesen Eintrag wirklich löschen?</p>
+          <p class="text-muted">Diese Aktion kann nicht rückgängig gemacht werden.</p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('deleteConfirmModal')">Abbrechen</button>
+          <button type="button" class="btn btn-danger" id="confirmDeleteBtn">
+            <i class="fas fa-trash"></i> Löschen
+          </button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(confirmModal);
   }
 
+  // Set up the confirm button
+  const confirmBtn = document.getElementById('confirmDeleteBtn');
+  if (confirmBtn) {
+    confirmBtn.onclick = async () => {
+      closeModal('deleteConfirmModal');
+      await performDelete(entryId);
+    };
+  }
+
+  // Show the modal
+  openModal('deleteConfirmModal');
+}
+
+/**
+ * Delete entry
+ */
+function deleteEntry(entryId: number): void {
+  showDeleteConfirmation(entryId);
+}
+
+/**
+ * Perform the actual deletion
+ */
+async function performDelete(entryId: number): Promise<void> {
   const token = getAuthToken();
-  if (!token) return;
+  if (token === null || token.length === 0) return;
 
   try {
-    const response = await fetch(`/api/blackboard/${entryId}`, {
-      method: 'DELETE',
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
+    const apiClient = ApiClient.getInstance();
+    const useV2 = window.FEATURE_FLAGS?.USE_API_V2_BLACKBOARD ?? false;
+    const endpoint = useV2 ? `/blackboard/entries/${entryId}` : `/blackboard/${entryId}`;
+
+    let response: { ok: boolean; json: () => Promise<unknown> };
+    if (useV2) {
+      try {
+        await apiClient.request(endpoint, { method: 'DELETE' }, { version: 'v2' });
+        response = { ok: true, json: async () => Promise.resolve({}) };
+      } catch (error) {
+        response = { ok: false, json: async () => Promise.resolve(error) };
+      }
+    } else {
+      response = await fetch(`/api${endpoint}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+    }
 
     if (response.ok) {
       showSuccess('Eintrag erfolgreich gelöscht!');
       entriesLoadingEnabled = true;
       void loadEntries();
     } else {
-      const error = await response.json();
+      const error = (await response.json()) as { message?: string };
       showError(error.message ?? 'Fehler beim Löschen des Eintrags');
     }
   } catch (error) {
@@ -1356,34 +1560,53 @@ function formatDate(dateString: string): string {
  * View entry details
  */
 async function viewEntry(entryId: number): Promise<void> {
-  console.log(`[Blackboard] viewEntry called for entry ${entryId}`);
+  console.info(`[Blackboard] viewEntry called for entry ${entryId}`);
   const token = getAuthToken();
-  if (!token) return;
+  if (token === null || token.length === 0) return;
 
   try {
-    console.log(`[Blackboard] Fetching entry ${entryId}...`);
-    const response = await fetch(`/api/blackboard/${entryId}`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
+    console.info(`[Blackboard] Fetching entry ${entryId}...`);
+    const apiClient = ApiClient.getInstance();
+    const useV2 = window.FEATURE_FLAGS?.USE_API_V2_BLACKBOARD ?? false;
+    const endpoint = useV2 ? `/blackboard/entries/${entryId}` : `/blackboard/${entryId}`;
 
-    if (response.ok) {
-      const entry = await response.json();
-      console.log(`[Blackboard] Entry ${entryId} loaded:`, entry);
+    let entry: BlackboardEntry;
+    if (useV2) {
+      try {
+        entry = await apiClient.request(endpoint, { method: 'GET' }, { version: 'v2' });
+        console.info(`[Blackboard] Entry ${entryId} loaded (v2):`, entry);
+      } catch (error) {
+        console.error('[Blackboard] Error loading entry:', error);
+        showError('Fehler beim Laden des Eintrags');
+        return;
+      }
+    } else {
+      const response = await fetch(`/api${endpoint}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
-      // Load attachments FIRST
-      console.log(`[Blackboard] Loading attachments for entry ${entryId}...`);
-      const attachments = await loadAttachments(entryId);
-      console.log(`[Blackboard] Attachments loaded:`, attachments);
+      if (!response.ok) {
+        showError('Fehler beim Laden des Eintrags');
+        return;
+      }
+      entry = (await response.json()) as BlackboardEntry;
+      console.info(`[Blackboard] Entry ${entryId} loaded (v1):`, entry);
+    }
 
-      // Show entry detail modal
-      const detailContent = document.getElementById('entryDetailContent');
-      if (detailContent) {
-        const priorityIcon = getPriorityIcon(entry.priority_level);
-        const canEdit = isAdmin ?? entry.created_by === currentUserId;
+    // Load attachments FIRST
+    console.info(`[Blackboard] Loading attachments for entry ${entryId}...`);
+    const attachments = await loadAttachments(entryId);
+    console.info(`[Blackboard] Attachments loaded:`, attachments);
 
-        detailContent.innerHTML = `
+    // Show entry detail modal
+    const detailContent = document.getElementById('entryDetailContent');
+    if (detailContent) {
+      const priorityIcon = getPriorityIcon(entry.priority_level);
+      const canEdit = isAdmin || entry.created_by === currentUserId;
+
+      detailContent.innerHTML = `
           <div class="entry-detail-header">
             <h2>${priorityIcon} ${escapeHtml(entry.title)}</h2>
             <div class="entry-detail-meta">
@@ -1415,16 +1638,16 @@ async function viewEntry(entryId: number): Promise<void> {
                   .map((att) => {
                     const isPDF = att.mime_type === 'application/pdf';
 
-                    console.log(`[Blackboard] Rendering attachment:`, att);
+                    console.info(`[Blackboard] Rendering attachment:`, att);
 
                     return `
-                    <div class="entry-attachment-item" 
+                    <div class="entry-attachment-item"
                          data-attachment-id="${att.id}"
                          data-mime-type="${att.mime_type}"
                          data-filename="${escapeHtml(att.original_name)}"
                          style="cursor: pointer;"
                          title="Vorschau: ${escapeHtml(att.original_name)}"
-                         onclick="console.log('[Blackboard] Inline onclick fired!', ${att.id}); window.previewAttachment && window.previewAttachment(${att.id}, '${escapeJsString(att.mime_type)}', '${escapeJsString(att.original_name)}'); return false;">
+                         onclick="console.info('[Blackboard] Inline onclick fired!', ${att.id}); window.previewAttachment && window.previewAttachment(${att.id}, '${escapeJsString(att.mime_type)}', '${escapeJsString(att.original_name)}'); return false;">
                       <i class="fas ${isPDF ? 'fa-file-pdf' : 'fa-file-image'}"></i>
                       <span>${escapeHtml(att.original_name)}</span>
                       <span class="attachment-size">(${formatFileSize(att.file_size)})</span>
@@ -1439,10 +1662,10 @@ async function viewEntry(entryId: number): Promise<void> {
           }
         `;
 
-        // Update footer buttons BEFORE showing modal
-        const footer = document.getElementById('entryDetailFooter');
-        if (footer && canEdit) {
-          footer.innerHTML = `
+      // Update footer buttons BEFORE showing modal
+      const footer = document.getElementById('entryDetailFooter');
+      if (footer && canEdit) {
+        footer.innerHTML = `
             <button type="button" class="btn btn-secondary" data-action="close">Schließen</button>
             <button type="button" class="btn btn-primary" onclick="editEntry(${entryId})">
               <i class="fas fa-edit"></i> Bearbeiten
@@ -1451,158 +1674,155 @@ async function viewEntry(entryId: number): Promise<void> {
               <i class="fas fa-trash"></i> Löschen
             </button>
           `;
+      }
+    }
+
+    // Show modal FIRST
+    console.info('[Blackboard] Showing entry detail modal');
+    const detailModal = document.getElementById('entryDetailModal');
+    if (!detailModal) {
+      console.error('[Blackboard] Entry detail modal not found!');
+      return;
+    }
+
+    // Use modal wrapper to show detail modal
+    console.info('[Blackboard] Opening entry detail modal');
+    openModal('entryDetailModal');
+
+    console.info('[Blackboard] Entry detail modal displayed');
+
+    // Re-attach close button listeners after modal is shown
+    setupCloseButtons();
+
+    // NOW add click handlers for attachments AFTER modal is visible
+    if (attachments.length > 0) {
+      setTimeout(() => {
+        const attachmentList = document.getElementById(`attachment-list-${entryId}`);
+        console.info(`[Blackboard] Attachment list element:`, attachmentList);
+
+        if (!attachmentList) {
+          console.error('[Blackboard] Attachment list not found!');
+          return;
         }
-      }
 
-      // Show modal FIRST
-      console.log('[Blackboard] Showing entry detail modal');
-      const detailModal = document.getElementById('entryDetailModal');
-      if (!detailModal) {
-        console.error('[Blackboard] Entry detail modal not found!');
-        return;
-      }
+        const attachmentItems = attachmentList.querySelectorAll('.entry-attachment-item');
+        console.info(`[Blackboard] Found ${attachmentItems.length} attachment items`);
 
-      // Use modal wrapper to show detail modal
-      console.log('[Blackboard] Opening entry detail modal');
-      openModal('entryDetailModal');
+        // Debug DOM structure
+        console.info('[Blackboard] Attachment list HTML:', attachmentList.innerHTML);
 
-      console.log('[Blackboard] Entry detail modal displayed');
+        attachmentItems.forEach((item, index) => {
+          const htmlItem = item as HTMLElement;
+          const attachmentId = parseInt(htmlItem.getAttribute('data-attachment-id') ?? '0', 10);
+          const mimeType = htmlItem.getAttribute('data-mime-type') ?? '';
+          const filename = htmlItem.getAttribute('data-filename') ?? '';
 
-      // Re-attach close button listeners after modal is shown
-      setupCloseButtons();
-
-      // NOW add click handlers for attachments AFTER modal is visible
-      if (attachments.length > 0) {
-        setTimeout(() => {
-          const attachmentList = document.getElementById(`attachment-list-${entryId}`);
-          console.log(`[Blackboard] Attachment list element:`, attachmentList);
-
-          if (!attachmentList) {
-            console.error('[Blackboard] Attachment list not found!');
-            return;
-          }
-
-          const attachmentItems = attachmentList.querySelectorAll('.entry-attachment-item');
-          console.log(`[Blackboard] Found ${attachmentItems.length} attachment items`);
-
-          // Debug DOM structure
-          console.log('[Blackboard] Attachment list HTML:', attachmentList.innerHTML);
-
-          attachmentItems.forEach((item, index) => {
-            const htmlItem = item as HTMLElement;
-            const attachmentId = parseInt(htmlItem.getAttribute('data-attachment-id') ?? '0');
-            const mimeType = htmlItem.getAttribute('data-mime-type') ?? '';
-            const filename = htmlItem.getAttribute('data-filename') ?? '';
-
-            console.log(`[Blackboard] Setting up attachment ${index}:`, {
-              attachmentId,
-              mimeType,
-              filename,
-              element: htmlItem,
-              parentElement: htmlItem.parentElement,
-            });
-
-            // Direct click handler without cloning
-            htmlItem.onclick = (e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              console.log(`[Blackboard] Attachment onclick fired:`, { attachmentId, mimeType, filename });
-
-              // Call preview function
-              if (typeof window.previewAttachment === 'function') {
-                console.log('[Blackboard] Calling window.previewAttachment');
-                void window.previewAttachment(attachmentId, mimeType, filename);
-              } else if (typeof previewAttachment === 'function') {
-                console.log('[Blackboard] Calling previewAttachment directly');
-                void previewAttachment(attachmentId, mimeType, filename);
-              } else {
-                console.error('[Blackboard] previewAttachment function not found!');
-              }
-            };
-
-            // Also add addEventListener as backup
-            htmlItem.addEventListener(
-              'click',
-              (_) => {
-                console.log(`[Blackboard] Attachment addEventListener fired:`, { attachmentId, mimeType, filename });
-              },
-              true,
-            ); // Use capture phase
-
-            // Visual feedback
-            htmlItem.style.cursor = 'pointer';
-            /* htmlItem.style.transition = 'all 0.2s ease'; */
-
-            htmlItem.addEventListener('mouseenter', () => {
-              htmlItem.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
-              htmlItem.style.transform = 'scale(1.02)';
-            });
-
-            htmlItem.addEventListener('mouseleave', () => {
-              htmlItem.style.backgroundColor = '';
-              htmlItem.style.transform = '';
-            });
-
-            // Log computed styles to check for issues
-            const computedStyle = window.getComputedStyle(htmlItem);
-            console.log(`[Blackboard] Attachment ${index} computed styles:`, {
-              display: computedStyle.display,
-              visibility: computedStyle.visibility,
-              pointerEvents: computedStyle.pointerEvents,
-              zIndex: computedStyle.zIndex,
-              position: computedStyle.position,
-            });
+          console.info(`[Blackboard] Setting up attachment ${index}:`, {
+            attachmentId,
+            mimeType,
+            filename,
+            element: htmlItem,
+            parentElement: htmlItem.parentElement,
           });
 
-          // Check if modal is blocking
-          const modal = document.getElementById('entryDetailModal');
-          if (modal) {
-            const modalStyle = window.getComputedStyle(modal);
-            console.log('[Blackboard] Modal computed styles:', {
-              zIndex: modalStyle.zIndex,
-              position: modalStyle.position,
-              pointerEvents: modalStyle.pointerEvents,
-              display: modalStyle.display,
-              visibility: modalStyle.visibility,
-              opacity: modalStyle.opacity,
-            });
-            console.log('[Blackboard] Modal dimensions:', {
-              offsetWidth: modal.offsetWidth,
-              offsetHeight: modal.offsetHeight,
-            });
-          }
+          // Direct click handler without cloning
+          htmlItem.onclick = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            console.info(`[Blackboard] Attachment onclick fired:`, { attachmentId, mimeType, filename });
 
-          // Check modal content
-          const modalContent = document.querySelector('#entryDetailModal .modal-body');
-          if (modalContent) {
-            const contentStyle = window.getComputedStyle(modalContent);
-            console.log('[Blackboard] Modal content styles:', {
-              display: contentStyle.display,
-              visibility: contentStyle.visibility,
-              overflow: contentStyle.overflow,
-            });
-            console.log('[Blackboard] Modal content dimensions:', {
-              offsetWidth: (modalContent as HTMLElement).offsetWidth,
-              offsetHeight: (modalContent as HTMLElement).offsetHeight,
-            });
-          }
+            // Call preview function
+            if (typeof window.previewAttachment === 'function') {
+              console.info('[Blackboard] Calling window.previewAttachment');
+              void window.previewAttachment(attachmentId, mimeType, filename);
+            } else if (typeof previewAttachment === 'function') {
+              console.info('[Blackboard] Calling previewAttachment directly');
+              void previewAttachment(attachmentId, mimeType, filename);
+            } else {
+              console.error('[Blackboard] previewAttachment function not found!');
+            }
+          };
 
-          // Test direct element access
-          console.log('[Blackboard] Testing direct access...');
-          const testAttachment = document.querySelector(
-            `#attachment-list-${entryId} .entry-attachment-item`,
-          ) as HTMLElement | null;
-          if (testAttachment) {
-            console.log('[Blackboard] Test attachment found:', testAttachment);
-            console.log('[Blackboard] Can you see and click this element?', {
-              offsetWidth: testAttachment.offsetWidth,
-              offsetHeight: testAttachment.offsetHeight,
-              offsetTop: testAttachment.offsetTop,
-              offsetLeft: testAttachment.offsetLeft,
-            });
-          }
-        }, 300); // Increased timeout to ensure modal is fully rendered
-      }
+          // Also add addEventListener as backup
+          htmlItem.addEventListener(
+            'click',
+            (_) => {
+              console.info(`[Blackboard] Attachment addEventListener fired:`, { attachmentId, mimeType, filename });
+            },
+            true,
+          ); // Use capture phase
+
+          // Visual feedback
+          htmlItem.style.cursor = 'pointer';
+          /* htmlItem.style.transition = 'all 0.2s ease'; */
+
+          htmlItem.addEventListener('mouseenter', () => {
+            htmlItem.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
+            htmlItem.style.transform = 'scale(1.02)';
+          });
+
+          htmlItem.addEventListener('mouseleave', () => {
+            htmlItem.style.backgroundColor = '';
+            htmlItem.style.transform = '';
+          });
+
+          // Log computed styles to check for issues
+          const computedStyle = window.getComputedStyle(htmlItem);
+          console.info(`[Blackboard] Attachment ${index} computed styles:`, {
+            display: computedStyle.display,
+            visibility: computedStyle.visibility,
+            pointerEvents: computedStyle.pointerEvents,
+            zIndex: computedStyle.zIndex,
+            position: computedStyle.position,
+          });
+        });
+
+        // Check if modal is blocking
+        const modal = document.getElementById('entryDetailModal');
+        if (modal) {
+          const modalStyle = window.getComputedStyle(modal);
+          console.info('[Blackboard] Modal computed styles:', {
+            zIndex: modalStyle.zIndex,
+            position: modalStyle.position,
+            pointerEvents: modalStyle.pointerEvents,
+            display: modalStyle.display,
+            visibility: modalStyle.visibility,
+            opacity: modalStyle.opacity,
+          });
+          console.info('[Blackboard] Modal dimensions:', {
+            offsetWidth: modal.offsetWidth,
+            offsetHeight: modal.offsetHeight,
+          });
+        }
+
+        // Check modal content
+        const modalContent = document.querySelector('#entryDetailModal .modal-body');
+        if (modalContent) {
+          const contentStyle = window.getComputedStyle(modalContent);
+          console.info('[Blackboard] Modal content styles:', {
+            display: contentStyle.display,
+            visibility: contentStyle.visibility,
+            overflow: contentStyle.overflow,
+          });
+          console.info('[Blackboard] Modal content dimensions:', {
+            offsetWidth: (modalContent as HTMLElement).offsetWidth,
+            offsetHeight: (modalContent as HTMLElement).offsetHeight,
+          });
+        }
+
+        // Test direct element access
+        console.info('[Blackboard] Testing direct access...');
+        const testAttachment = document.querySelector(`#attachment-list-${entryId} .entry-attachment-item`);
+        if (testAttachment) {
+          console.info('[Blackboard] Test attachment found:', testAttachment);
+          console.info('[Blackboard] Can you see and click this element?', {
+            offsetWidth: (testAttachment as HTMLElement).offsetWidth,
+            offsetHeight: (testAttachment as HTMLElement).offsetHeight,
+            offsetTop: (testAttachment as HTMLElement).offsetTop,
+            offsetLeft: (testAttachment as HTMLElement).offsetLeft,
+          });
+        }
+      }, 300); // Increased timeout to ensure modal is fully rendered
     }
   } catch (error) {
     console.error('Error viewing entry:', error);
@@ -1617,9 +1837,9 @@ async function viewEntry(entryId: number): Promise<void> {
  * Preview attachment in modal
  */
 async function previewAttachment(attachmentId: number, mimeType: string, fileName: string): Promise<void> {
-  console.log(`[Blackboard] previewAttachment called:`, { attachmentId, mimeType, fileName });
+  console.info(`[Blackboard] previewAttachment called:`, { attachmentId, mimeType, fileName });
   const token = getAuthToken();
-  if (!token) {
+  if (token === null || token.length === 0) {
     console.error('[Blackboard] No auth token for preview');
     return;
   }
@@ -1655,7 +1875,7 @@ async function previewAttachment(attachmentId: number, mimeType: string, fileNam
   }
 
   // Show modal using the same approach as other modals
-  console.log('[Blackboard] Showing preview modal');
+  console.info('[Blackboard] Showing preview modal');
   previewModal.style.display = 'flex';
   previewModal.classList.add('active');
   previewModal.style.opacity = '1';
@@ -1668,17 +1888,30 @@ async function previewAttachment(attachmentId: number, mimeType: string, fileNam
   // Update download link
   const downloadLink = document.getElementById('downloadLink') as HTMLAnchorElement | null;
   if (downloadLink) {
-    downloadLink.href = `/api/blackboard/attachments/${attachmentId}?download=true`;
+    const useV2 = window.FEATURE_FLAGS?.USE_API_V2_BLACKBOARD ?? false;
+    const endpoint = `/blackboard/attachments/${attachmentId}?download=true`;
+
+    downloadLink.href = useV2 ? `/api/v2${endpoint}` : `/api${endpoint}`;
     downloadLink.setAttribute('download', fileName);
     // Add click handler to download with auth token
     downloadLink.onclick = async (e) => {
       e.preventDefault();
       try {
-        const response = await fetch(`/api/blackboard/attachments/${attachmentId}?download=true`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
+        let response: Response;
+        if (useV2) {
+          // For v2, use fetch directly for blob download
+          response = await fetch(`/api/v2${endpoint}`, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          });
+        } else {
+          response = await fetch(`/api${endpoint}`, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          });
+        }
 
         if (!response.ok) throw new Error('Download failed');
 
@@ -1703,7 +1936,9 @@ async function previewAttachment(attachmentId: number, mimeType: string, fileNam
   if (!previewContent) return;
 
   try {
-    const attachmentUrl = `/api/blackboard/attachments/${attachmentId}`;
+    const useV2 = window.FEATURE_FLAGS?.USE_API_V2_BLACKBOARD ?? false;
+    const endpoint = `/blackboard/attachments/${attachmentId}`;
+    const attachmentUrl = useV2 ? `/api/v2${endpoint}` : `/api${endpoint}`;
 
     if (mimeType.startsWith('image/')) {
       // Fetch image with authorization header and convert to blob URL
@@ -1732,7 +1967,13 @@ async function previewAttachment(attachmentId: number, mimeType: string, fileNam
       // Clean up blob URL when modal is closed
       const closeButtons = previewModal.querySelectorAll('[data-action="close"]');
       closeButtons.forEach((btn) => {
-        btn.addEventListener('click', () => URL.revokeObjectURL(blobUrl), { once: true });
+        btn.addEventListener(
+          'click',
+          () => {
+            URL.revokeObjectURL(blobUrl);
+          },
+          { once: true },
+        );
       });
     } else if (mimeType === 'application/pdf') {
       // For PDFs, use object tag instead of iframe to avoid CSP issues
@@ -1750,7 +1991,7 @@ async function previewAttachment(attachmentId: number, mimeType: string, fileNam
       // Display PDF with gray background to hide gaps
       previewContent.innerHTML = `
         <div style="width: 100%; height: 100%; background: #525659; display: flex; align-items: center; justify-content: center; overflow: hidden;">
-          <iframe src="${blobUrl}#zoom=100" 
+          <iframe src="${blobUrl}#zoom=100"
                   style="width: calc(100% + 40px); height: 100%; border: none; display: block; margin-left: -20px;"
                   allowfullscreen>
           </iframe>
@@ -1763,16 +2004,18 @@ async function previewAttachment(attachmentId: number, mimeType: string, fileNam
         if (openButton) {
           openButton.onclick = async () => {
             try {
-              const response = await fetch(attachmentUrl, {
+              const resp = await fetch(attachmentUrl, {
                 headers: { Authorization: `Bearer ${token}` },
               });
-              const blob = await response.blob();
-              const url = URL.createObjectURL(blob);
+              const fileBlob = await resp.blob();
+              const url = URL.createObjectURL(fileBlob);
               const a = document.createElement('a');
               a.href = url;
               a.target = '_blank';
               a.click();
-              setTimeout(() => URL.revokeObjectURL(url), 100);
+              setTimeout(() => {
+                URL.revokeObjectURL(url);
+              }, 100);
             } catch (error) {
               console.error('Error opening PDF in new tab:', error);
               showError('Fehler beim Öffnen der PDF');
@@ -1784,7 +2027,13 @@ async function previewAttachment(attachmentId: number, mimeType: string, fileNam
       // Clean up blob URL when modal is closed
       const closeButtons = previewModal.querySelectorAll('[data-action="close"]');
       closeButtons.forEach((btn) => {
-        btn.addEventListener('click', () => URL.revokeObjectURL(blobUrl), { once: true });
+        btn.addEventListener(
+          'click',
+          () => {
+            URL.revokeObjectURL(blobUrl);
+          },
+          { once: true },
+        );
       });
     } else {
       // Unsupported file type - create elements safely
@@ -1862,7 +2111,7 @@ if (typeof window !== 'undefined') {
  * Open direct attachment modal
  */
 function openDirectAttachModal(): void {
-  console.log('[DirectAttach] Opening modal');
+  console.info('[DirectAttach] Opening modal');
   const modal = document.getElementById('directAttachModal');
   if (!modal) return;
 
@@ -1873,7 +2122,7 @@ function openDirectAttachModal(): void {
   // Reset file input and global file
   const fileInput = document.getElementById('directAttachInput') as HTMLInputElement | null;
   if (fileInput) {
-    console.log('[DirectAttach] Resetting file input');
+    console.info('[DirectAttach] Resetting file input');
     fileInput.value = '';
   }
   directAttachmentFile = null;
@@ -1889,7 +2138,7 @@ function openDirectAttachModal(): void {
   const mediumButton = document.querySelector('.size-option[data-size="medium"]');
   if (mediumButton) {
     mediumButton.classList.add('active');
-    console.log('[DirectAttach] Set medium size as active');
+    console.info('[DirectAttach] Set medium size as active');
   }
 
   // Show modal first
@@ -1905,7 +2154,7 @@ function openDirectAttachModal(): void {
  * Setup direct attachment handlers
  */
 function setupDirectAttachHandlers(): void {
-  console.log('[DirectAttach] Setting up handlers');
+  console.info('[DirectAttach] Setting up handlers');
   const dropZone = document.getElementById('directAttachDropZone') as HTMLDivElement | null;
   const fileInput = document.getElementById('directAttachInput') as HTMLInputElement | null;
   const saveBtn = document.getElementById('saveDirectAttachBtn') as HTMLButtonElement | null;
@@ -1934,13 +2183,13 @@ function setupDirectAttachHandlers(): void {
 
   // Create new handlers
   directAttachHandlers.dropZoneClick = () => {
-    console.log('[DirectAttach] Drop zone clicked');
+    console.info('[DirectAttach] Drop zone clicked');
     fileInput.click();
   };
 
   directAttachHandlers.fileInputChange = (event: Event) => {
     const target = event.target as HTMLInputElement | null;
-    console.log('[DirectAttach] File input changed:', target?.files?.length);
+    console.info('[DirectAttach] File input changed:', target?.files?.length);
     if (target?.files?.[0]) {
       handleDirectAttachFile(target.files[0]);
     }
@@ -1962,8 +2211,8 @@ function setupDirectAttachHandlers(): void {
     dropZone.style.borderColor = 'rgba(255,255,255,0.3)';
     dropZone.style.background = 'transparent';
 
-    if (event.dataTransfer?.files?.[0]) {
-      console.log('[DirectAttach] File dropped:', event.dataTransfer.files[0].name);
+    if (event.dataTransfer?.files[0]) {
+      console.info('[DirectAttach] File dropped:', event.dataTransfer.files[0].name);
       handleDirectAttachFile(event.dataTransfer.files[0]);
     }
   };
@@ -1978,8 +2227,10 @@ function setupDirectAttachHandlers(): void {
   // Size selection buttons - use event delegation
   document.querySelectorAll('.size-option').forEach((btn) => {
     btn.addEventListener('click', function (this: HTMLElement) {
-      console.log('[DirectAttach] Size button clicked:', this.getAttribute('data-size'));
-      document.querySelectorAll('.size-option').forEach((b) => b.classList.remove('active'));
+      console.info('[DirectAttach] Size button clicked:', this.getAttribute('data-size'));
+      document.querySelectorAll('.size-option').forEach((b) => {
+        b.classList.remove('active');
+      });
       this.classList.add('active');
     });
   });
@@ -1987,7 +2238,7 @@ function setupDirectAttachHandlers(): void {
   // Save button handler
   if (saveBtn) {
     saveBtn.onclick = async () => {
-      console.log('[DirectAttach] Save button clicked');
+      console.info('[DirectAttach] Save button clicked');
       await saveDirectAttachment();
     };
   }
@@ -1997,7 +2248,7 @@ function setupDirectAttachHandlers(): void {
  * Handle direct attachment file selection
  */
 function handleDirectAttachFile(file: File): void {
-  console.log('[DirectAttach] handleDirectAttachFile called with:', file.name, file.type, file.size);
+  console.info('[DirectAttach] handleDirectAttachFile called with:', file.name, file.type, file.size);
 
   // Validate file type
   const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf'];
@@ -2014,7 +2265,7 @@ function handleDirectAttachFile(file: File): void {
 
   // Store the file globally
   directAttachmentFile = file;
-  console.log('[DirectAttach] File stored globally');
+  console.info('[DirectAttach] File stored globally');
 
   // Show preview
   const preview = document.getElementById('directAttachPreview');
@@ -2030,7 +2281,7 @@ function handleDirectAttachFile(file: File): void {
 
   // Set title from filename if empty
   const titleInput = document.getElementById('directAttachTitle') as HTMLInputElement | null;
-  if (titleInput && !titleInput.value) {
+  if (titleInput && titleInput.value.length === 0) {
     titleInput.value = file.name.replace(/\.[^/.]+$/, ''); // Remove extension
   }
 
@@ -2056,7 +2307,7 @@ function handleDirectAttachFile(file: File): void {
  * Clear direct attachment
  */
 function clearDirectAttachment(): void {
-  console.log('[DirectAttach] Clearing attachment');
+  console.info('[DirectAttach] Clearing attachment');
   const fileInput = document.getElementById('directAttachInput') as HTMLInputElement | null;
   const preview = document.getElementById('directAttachPreview');
 
@@ -2071,15 +2322,15 @@ function clearDirectAttachment(): void {
  * Save direct attachment
  */
 async function saveDirectAttachment(): Promise<void> {
-  console.log('[DirectAttach] saveDirectAttachment called');
-  console.log('[DirectAttach] Global file:', directAttachmentFile?.name ?? 'none');
+  console.info('[DirectAttach] saveDirectAttachment called');
+  console.info('[DirectAttach] Global file:', directAttachmentFile?.name ?? 'none');
 
   const titleInput = document.getElementById('directAttachTitle') as HTMLInputElement | null;
   const orgLevelSelect = document.getElementById('directAttachOrgLevel') as HTMLSelectElement | null;
   const prioritySelect = document.getElementById('directAttachPriority') as HTMLSelectElement | null;
-  const sizeOption = document.querySelector('.size-option.active') as HTMLElement | null;
+  const sizeOption = document.querySelector('.size-option.active');
 
-  console.log('[DirectAttach] Elements found:', {
+  console.info('[DirectAttach] Elements found:', {
     globalFile: directAttachmentFile?.name ?? 'none',
     titleInput: !!titleInput,
     orgLevelSelect: !!orgLevelSelect,
@@ -2110,22 +2361,41 @@ async function saveDirectAttachment(): Promise<void> {
 
   try {
     const token = localStorage.getItem('token');
-    if (!token) {
+    if (token === null || token.length === 0) {
       showError('Keine Authentifizierung gefunden');
       return;
     }
 
-    const response = await fetch('/api/blackboard', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-      body: formData,
-    });
+    const apiClient = ApiClient.getInstance();
+    const useV2 = window.FEATURE_FLAGS?.USE_API_V2_BLACKBOARD ?? false;
+    const endpoint = useV2 ? '/blackboard/entries' : '/blackboard';
 
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.message ?? 'Fehler beim Speichern');
+    if (useV2) {
+      try {
+        await apiClient.request(
+          endpoint,
+          {
+            method: 'POST',
+            body: formData,
+          },
+          { version: 'v2', contentType: '' },
+        );
+      } catch (error) {
+        throw new Error((error as { message?: string }).message ?? 'Fehler beim Speichern');
+      }
+    } else {
+      const response = await fetch(`/api${endpoint}`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const error = (await response.json()) as { message?: string };
+        throw new Error(error.message ?? 'Fehler beim Speichern');
+      }
     }
 
     showSuccess('Datei erfolgreich angeheftet!');
@@ -2210,29 +2480,18 @@ function setupFullscreenControls(): void {
         // Add fullscreen mode class to body
         document.body.classList.add('fullscreen-mode');
 
-        // Request fullscreen
-        if (document.documentElement.requestFullscreen) {
+        // Request fullscreen - check for browser compatibility
+        const elem = document.documentElement as Document['documentElement'] & {
+          webkitRequestFullscreen?: () => Promise<void>;
+          msRequestFullscreen?: () => Promise<void>;
+        };
+
+        if ('requestFullscreen' in document.documentElement) {
           await document.documentElement.requestFullscreen();
-        } else if (
-          (document.documentElement as Document['documentElement'] & { webkitRequestFullscreen?: () => Promise<void> })
-            .webkitRequestFullscreen
-        ) {
-          const elem = document.documentElement as Document['documentElement'] & {
-            webkitRequestFullscreen?: () => Promise<void>;
-          };
-          if (elem.webkitRequestFullscreen) {
-            await elem.webkitRequestFullscreen();
-          }
-        } else if (
-          (document.documentElement as Document['documentElement'] & { msRequestFullscreen?: () => Promise<void> })
-            .msRequestFullscreen
-        ) {
-          const elem = document.documentElement as Document['documentElement'] & {
-            msRequestFullscreen?: () => Promise<void>;
-          };
-          if (elem.msRequestFullscreen) {
-            await elem.msRequestFullscreen();
-          }
+        } else if (elem.webkitRequestFullscreen !== undefined) {
+          await elem.webkitRequestFullscreen();
+        } else if (elem.msRequestFullscreen !== undefined) {
+          await elem.msRequestFullscreen();
         }
 
         // Start auto-refresh (every 60 minutes)
@@ -2302,23 +2561,21 @@ function handleFullscreenChange(): void {
  * Exit fullscreen mode
  */
 function exitFullscreen(): void {
-  if (document.exitFullscreen) {
+  // Check for browser compatibility
+  const doc = document as Document & {
+    webkitExitFullscreen?: () => void;
+    mozCancelFullScreen?: () => void;
+    msExitFullscreen?: () => void;
+  };
+
+  if ('exitFullscreen' in document) {
     void document.exitFullscreen();
-  } else if ((document as Document & { webkitExitFullscreen?: () => void }).webkitExitFullscreen) {
-    const doc = document as Document & { webkitExitFullscreen?: () => void };
-    if (doc.webkitExitFullscreen) {
-      doc.webkitExitFullscreen();
-    }
-  } else if ((document as Document & { mozCancelFullScreen?: () => void }).mozCancelFullScreen) {
-    const doc = document as Document & { mozCancelFullScreen?: () => void };
-    if (doc.mozCancelFullScreen) {
-      doc.mozCancelFullScreen();
-    }
-  } else if ((document as Document & { msExitFullscreen?: () => void }).msExitFullscreen) {
-    const doc = document as Document & { msExitFullscreen?: () => void };
-    if (doc.msExitFullscreen) {
-      doc.msExitFullscreen();
-    }
+  } else if (doc.webkitExitFullscreen !== undefined) {
+    doc.webkitExitFullscreen();
+  } else if (doc.mozCancelFullScreen !== undefined) {
+    doc.mozCancelFullScreen();
+  } else if (doc.msExitFullscreen !== undefined) {
+    doc.msExitFullscreen();
   }
 
   document.body.classList.remove('fullscreen-mode');
@@ -2336,7 +2593,7 @@ function startAutoRefresh(): void {
 
   // Set up interval for 60 minutes (3600000 ms)
   fullscreenAutoRefreshInterval = setInterval(() => {
-    console.log('[AutoRefresh] Reloading entries...');
+    console.info('[AutoRefresh] Reloading entries...');
     if (entriesLoadingEnabled) {
       void loadEntries();
     }

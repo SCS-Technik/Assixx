@@ -163,7 +163,6 @@ body::after {
 .card {
   background: rgba(255, 255, 255, 0.02);
   backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
   border: 1px solid hsla(0, 0%, 100%, 0.1);
   box-shadow:
     0 8px 32px rgba(0, 0, 0, 0.4),
@@ -254,7 +253,6 @@ Das Navigation Container System ist der moderne Standard für konsistente Naviga
   height: 60px;
   background: rgba(255, 255, 255, 0.02);
   backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
   border: 1px solid rgba(255, 255, 255, 0.1);
   box-shadow:
     0 8px 32px rgba(0, 0, 0, 0.4),
@@ -331,7 +329,7 @@ Das Navigation Container System ist der moderne Standard für konsistente Naviga
 .form-control:-ms-input-placeholder,
 .form-input:-ms-input-placeholder {
   color: var(--text-secondary);
-  opacity: 0.6;
+  opacity: 0%.6;
 }
 ```
 
@@ -367,7 +365,7 @@ Das Navigation Container System ist der moderne Standard für konsistente Naviga
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--spacing-md);
+  padding: var(--spacing-2sm);
   background: rgba(255, 255, 255, 0.03);
   backdrop-filter: blur(10px);
   border: 1px solid hsla(0, 0%, 100%, 0.1);
@@ -393,7 +391,6 @@ Das Navigation Container System ist der moderne Standard für konsistente Naviga
   right: 0;
   background: rgba(18, 18, 18, 0.8);
   backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
   border: 1px solid hsla(0, 0%, 100%, 0.1);
   border-radius: var(--radius-sm);
   box-shadow:
@@ -401,7 +398,7 @@ Das Navigation Container System ist der moderne Standard für konsistente Naviga
     inset 0 1px 0 rgba(255, 255, 255, 0.1);
   max-height: 200px;
   overflow-y: auto;
-  opacity: 0;
+  opacity: 0%;
   visibility: hidden;
   transform: translateY(-10px);
   transition: all 0.3s ease;
@@ -409,7 +406,7 @@ Das Navigation Container System ist der moderne Standard für konsistente Naviga
 }
 
 .dropdown-options.active {
-  opacity: 1;
+  opacity: 100%;
   visibility: visible;
   transform: translateY(0);
 }
@@ -433,7 +430,7 @@ Das Navigation Container System ist der moderne Standard für konsistente Naviga
 /* First-Level: KEIN background, nur Shadow-Effekt */
 .btn-primary-first {
   background: none !important; /* Explizit kein Background */
-  color: white;
+  color: #fff;
   position: relative;
   overflow: hidden;
   padding: 10px 24px;
@@ -456,7 +453,7 @@ Das Navigation Container System ist der moderne Standard für konsistente Naviga
 /* Second-Level Button (.btn-primary - mit Gradient) */
 .btn-primary {
   background: linear-gradient(135deg, var(--primary-color), var(--primary-hover));
-  color: white;
+  color: #fff;
   position: relative;
   overflow: hidden;
   padding: 10px 24px;
@@ -624,7 +621,7 @@ Das Navigation Container System ist der moderne Standard für konsistente Naviga
 .btn-danger {
   background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
   border: 1px solid #bd2130;
-  color: white;
+  color: #fff;
   padding: 0.375rem 0.75rem;
   border-radius: var(--radius-sm);
   font-weight: 500;
@@ -674,9 +671,7 @@ Das Navigation Container System ist der moderne Standard für konsistente Naviga
   top: 0;
   width: 100%;
   height: 100%;
-  background-color: rgba(0, 0, 0, 0.7);
   backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -684,7 +679,6 @@ Das Navigation Container System ist der moderne Standard für konsistente Naviga
 
 .modal-content {
   backdrop-filter: blur(20px) saturate(580%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: var(--radius-md);
   box-shadow:
@@ -773,7 +767,7 @@ Das Navigation Container System ist der moderne Standard für konsistente Naviga
 #logout-btn {
   padding: 0.25rem 0.6rem;
   background: linear-gradient(135deg, rgba(220, 38, 38, 0.8), rgba(185, 28, 28, 0.8));
-  color: white;
+  color: #fff;
   border: none;
   border-radius: 4px;
   font-size: 0.8rem;
@@ -811,12 +805,12 @@ Das Navigation Container System ist der moderne Standard für konsistente Naviga
   right: 0;
   height: 3px;
   background: linear-gradient(90deg, var(--primary-color), var(--primary-light));
-  opacity: 0;
+  opacity: 0%;
   transition: opacity 0.3s ease;
 }
 
 .compact-card:hover::before {
-  opacity: 1;
+  opacity: 100%;
 }
 
 .compact-card:hover {
@@ -889,11 +883,11 @@ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Ubuntu", Roboto, sa
 /* Fade In Up */
 @keyframes fadeInUp {
   from {
-    opacity: 0;
+    opacity: 0%;
     transform: translateY(30px);
   }
   to {
-    opacity: 1;
+    opacity: 100%;
     transform: translateY(0);
   }
 }
@@ -901,10 +895,10 @@ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Ubuntu", Roboto, sa
 /* Fade In (Success Overlay) */
 @keyframes fadeIn {
   from {
-    opacity: 0;
+    opacity: 0%;
   }
   to {
-    opacity: 1;
+    opacity: 100%;
   }
 }
 
@@ -912,11 +906,11 @@ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Ubuntu", Roboto, sa
 @keyframes scaleIn {
   from {
     transform: scale(0.8);
-    opacity: 0;
+    opacity: 0%;
   }
   to {
     transform: scale(1);
-    opacity: 1;
+    opacity: 100%;
   }
 }
 
@@ -937,11 +931,11 @@ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Ubuntu", Roboto, sa
 @keyframes subtle-pulse {
   0%,
   100% {
-    opacity: 1;
+    opacity: 100%;
     transform: scale(1);
   }
   50% {
-    opacity: 0.95;
+    opacity: 0%.95;
     transform: scale(1.02);
   }
 }
@@ -1250,7 +1244,7 @@ function showSuccessMessage() {
 ```css
 .unread-badge {
   background: linear-gradient(135deg, #f44336, #e53935);
-  color: white;
+  color: #fff;
   border-radius: 10px;
   padding: 2px 6px;
   font-size: 0.75rem;
@@ -1478,7 +1472,7 @@ document.addEventListener("click", function (e) {
 /* Unread Badge */
 .unread-badge {
   background: linear-gradient(135deg, #f44336, #e53935);
-  color: white;
+  color: #fff;
   border-radius: 10px;
   padding: 2px 6px;
   font-size: 0.75rem;
@@ -1578,7 +1572,6 @@ document.addEventListener("click", function (e) {
 .glass-card {
   background: rgba(255, 255, 255, 0.02);
   backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
   border: 1px solid hsla(0, 0%, 100%, 0.1);
   border-radius: var(--radius-md);
   box-shadow:
@@ -1644,7 +1637,6 @@ document.addEventListener("click", function (e) {
 .glass-form {
   background: rgba(255, 255, 255, 0.02);
   backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
   border: 1px solid hsla(0, 0%, 100%, 0.1);
   border-radius: var(--radius-md);
   padding: var(--spacing-xl);

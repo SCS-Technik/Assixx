@@ -82,12 +82,12 @@
         right: 0;
         height: 3px;
         background: linear-gradient(90deg, var(--primary-color), var(--primary-light));
-        opacity: 0;
+        opacity: 0%;
         transition: opacity 0.3s ease;
       }
 
       .upload-section:hover::before {
-        opacity: 1;
+        opacity: 100%;
       }
 
       .upload-section:hover {
@@ -142,7 +142,6 @@
         padding: 10px 15px;
         background: rgba(255, 255, 255, 0.05);
         backdrop-filter: blur(5px);
-        -webkit-backdrop-filter: blur(5px);
         border: 1px solid rgba(255, 255, 255, 0.1);
         border-radius: var(--radius-sm);
         color: var(--text-primary);
@@ -181,16 +180,14 @@
         display: flex;
         align-items: center;
         justify-content: space-between;
-        padding: var(--spacing-md);
+        padding: var(--spacing-2sm);
         background: rgba(255, 255, 255, 0.03);
         backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
         border: 1px solid hsla(0, 0%, 100%, 0.1);
         border-radius: var(--radius-sm);
         color: #fff;
         cursor: pointer;
         transition: all 0.3s ease;
-        min-height: 46px;
       }
 
       .dropdown-display:hover {
@@ -225,13 +222,12 @@
         right: 0;
         background: rgba(18, 18, 18, 0.8);
         backdrop-filter: blur(20px) saturate(180%);
-        -webkit-backdrop-filter: blur(20px) saturate(180%);
         border: 1px solid hsla(0, 0%, 100%, 0.1);
         border-radius: var(--radius-sm);
         box-shadow: var(--shadow-sm);
         max-height: 200px;
         overflow-y: auto;
-        opacity: 0;
+        opacity: 0%;
         visibility: hidden;
         transform: translateY(-10px);
         transition: all 0.3s ease;
@@ -239,7 +235,7 @@
       }
 
       .dropdown-options.active {
-        opacity: 1;
+        opacity: 100%;
         visibility: visible;
         transform: translateY(0);
       }
@@ -308,7 +304,6 @@
         margin-bottom: var(--spacing-md);
         background: rgba(255, 255, 255, 0.02);
         backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
       }
 
       .file-drop-area:hover,
@@ -339,10 +334,9 @@
       .file-restrictions {
         background: rgba(33, 150, 243, 0.05);
         backdrop-filter: blur(5px);
-        -webkit-backdrop-filter: blur(5px);
         border: 1px solid rgba(33, 150, 243, 0.1);
         border-radius: var(--radius-sm);
-        padding: var(--spacing-sm);
+        padding: var(--spacing-2sm);
         margin-top: var(--spacing-xs);
         margin-bottom: var(--spacing-md);
         color: rgba(255, 255, 255, 0.7);
@@ -355,7 +349,7 @@
         top: 0;
         height: 100%;
         width: 100%;
-        opacity: 0;
+        opacity: 0%;
         cursor: pointer;
       }
 
@@ -363,7 +357,6 @@
         display: none;
         background: rgba(33, 150, 243, 0.08);
         backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
         border: 1px solid rgba(33, 150, 243, 0.2);
         border-radius: var(--radius-sm);
         padding: 10px 15px;
@@ -388,7 +381,6 @@
         max-height: 400px;
         background: rgba(255, 255, 255, 0.02);
         backdrop-filter: blur(20px);
-        -webkit-backdrop-filter: blur(20px);
         box-shadow: var(--shadow-sm);
       }
 
@@ -409,8 +401,7 @@
         align-items: center;
         background: rgba(255, 255, 255, 0.03);
         backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
-        padding: var(--spacing-sm);
+        padding: var(--spacing-2sm);
         border-bottom: 1px solid rgba(255, 255, 255, 0.1);
       }
 
@@ -467,7 +458,7 @@
       /* Second-Level Button für Upload (mit Gradient) */
       .btn-primary {
         background: linear-gradient(135deg, var(--primary-color), var(--primary-hover));
-        color: white;
+        color: #fff;
         position: relative;
         overflow: hidden;
         box-shadow:
@@ -511,7 +502,6 @@
         display: flex;
         align-items: center;
         backdrop-filter: blur(20px) saturate(180%);
-        -webkit-backdrop-filter: blur(20px) saturate(180%);
         /* animation: fadeInUp 0.3s ease-out; */
         transition: all 0.3s ease;
       }
@@ -542,11 +532,11 @@
       /* Animationen */
       @keyframes fadeInUp {
         from {
-          opacity: 0;
+          opacity: 0%;
           transform: translateY(20px);
         }
         to {
-          opacity: 1;
+          opacity: 100%;
           transform: translateY(0);
         }
       }
@@ -567,12 +557,9 @@
         margin-right: 8px;
       }
 
-      .loading-spinner svg {
-        /* animation: spin 1.5s linear infinite; */
-      }
-
       /* Recipient Type Selector Styles */
       .recipient-type-selector {
+        /* Grid layout for recipient type buttons */
         display: grid;
         grid-template-columns: repeat(2, 1fr);
         gap: 12px;
@@ -874,7 +861,7 @@
 
     <script>
       document.addEventListener('DOMContentLoaded', () => {
-        console.log('Document upload page loaded');
+        console.info('Document upload page loaded');
 
         // Datei-Upload-Bereich einrichten
         setupFileUpload();
@@ -1188,7 +1175,7 @@
             const data = await response.json();
             // Handle v2 API response format: {success: true, data: [...], pagination: {...}}
             const employees = data.data || [];
-            console.log(`Loaded ${employees.length} employees`);
+            console.info(`Loaded ${employees.length} employees`);
 
             // Dropdown leeren
             userDropdown.innerHTML = '';
@@ -1327,7 +1314,9 @@
           hideSuccess();
 
           try {
-            const response = await fetch('/api/documents/upload', {
+            const useV2Documents = window.FEATURE_FLAGS?.USE_API_V2_DOCUMENTS;
+            const endpoint = useV2Documents ? '/api/v2/documents/upload' : '/api/documents/upload';
+            const response = await fetch(endpoint, {
               method: 'POST',
               headers: {
                 Authorization: `Bearer ${token}`,
@@ -1338,7 +1327,7 @@
             const result = await response.json();
 
             if (response.ok) {
-              console.log('Upload successful:', result);
+              console.info('Upload successful:', result);
               form.reset();
 
               // Dropdowns zurücksetzen

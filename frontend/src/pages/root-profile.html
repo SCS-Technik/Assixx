@@ -20,7 +20,8 @@
         document.documentElement.style.setProperty('--card-padding', sidebarCollapsed ? '2rem' : '1.5rem');
       })();
     </script>
-    <link href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@400;500;700&display=swap" rel="stylesheet" />
+    <script src="/feature-flags.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@100;200;300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
     <style>
       @import url('/styles/dashboard-theme.css');
       @import url('/styles/breadcrumb-alignment.css');
@@ -129,7 +130,7 @@
       /* More specific selector to override global styles */
       #profile-picture-display.profile-picture-placeholder.avatar-initials {
         background: linear-gradient(135deg, #2196f3, #42a5f5) !important;
-        color: white !important;
+        color: #fff !important;
         font-weight: 600 !important;
         font-size: 3rem !important;
         text-transform: uppercase !important;
@@ -186,7 +187,7 @@
       }
 
       .form-control:disabled {
-        opacity: 0.5;
+        opacity: 0%.5;
         cursor: not-allowed;
       }
 
@@ -215,7 +216,7 @@
       .btn-primary {
         background: linear-gradient(135deg, rgba(0, 142, 255, 0.2), rgba(0, 142, 255, 0.1));
         border-color: rgba(0, 142, 255, 0.3);
-        color: white;
+        color: #fff;
       }
 
       .btn-secondary {
@@ -247,7 +248,7 @@
 
       /* Success/Error Messages */
       .alert {
-        padding: var(--spacing-md);
+        padding: var(--spacing-2sm);
         border-radius: var(--radius-sm);
         margin-bottom: var(--spacing-md);
         backdrop-filter: blur(10px);
@@ -269,11 +270,11 @@
       /* Animationen */
       @keyframes fadeInUp {
         from {
-          opacity: 0;
+          opacity: 0%;
           transform: translateY(30px);
         }
         to {
-          opacity: 1;
+          opacity: 100%;
           transform: translateY(0);
         }
       }
@@ -298,9 +299,7 @@
         left: 0;
         right: 0;
         bottom: 0;
-        background: rgba(0, 0, 0, 0.7);
         backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
         display: none;
         align-items: center;
         justify-content: center;
@@ -315,7 +314,6 @@
       .modal-content {
         background: rgba(255, 255, 255, 0.02);
         backdrop-filter: blur(20px) saturate(180%);
-        -webkit-backdrop-filter: blur(20px) saturate(180%);
         border: 1px solid rgba(255, 255, 255, 0.1);
         border-radius: var(--radius-md);
         box-shadow: var(--shadow-sm);
@@ -329,20 +327,20 @@
 
       @keyframes fadeIn {
         from {
-          opacity: 0;
+          opacity: 0%;
         }
         to {
-          opacity: 1;
+          opacity: 100%;
         }
       }
 
       @keyframes fadeInUp {
         from {
-          opacity: 0;
+          opacity: 0%;
           transform: translateY(30px);
         }
         to {
-          opacity: 1;
+          opacity: 100%;
           transform: translateY(0);
         }
       }
@@ -374,7 +372,7 @@
         background: rgba(244, 67, 54, 0.1);
         border: 1px solid rgba(244, 67, 54, 0.3);
         border-radius: var(--radius-sm);
-        padding: var(--spacing-md);
+        padding: var(--spacing-2sm);
         margin-bottom: var(--spacing-lg);
         backdrop-filter: blur(10px);
       }
@@ -431,21 +429,21 @@
 
       @keyframes fadeIn {
         from {
-          opacity: 0;
+          opacity: 0%;
         }
         to {
-          opacity: 1;
+          opacity: 100%;
         }
       }
 
       @keyframes scaleIn {
         from {
           transform: scale(0.8);
-          opacity: 0;
+          opacity: 0%;
         }
         to {
           transform: scale(1);
-          opacity: 1;
+          opacity: 100%;
         }
       }
 
@@ -468,7 +466,7 @@
         background: rgba(255, 255, 255, 0.02);
         border: 1px solid rgba(255, 255, 255, 0.1);
         border-radius: var(--radius-sm);
-        padding: var(--spacing-md);
+        padding: var(--spacing-2sm);
         margin: var(--spacing-sm) 0;
         display: flex;
         align-items: center;
@@ -533,7 +531,7 @@
         background: rgba(255, 255, 255, 0.02);
         border: 1px solid rgba(255, 255, 255, 0.1);
         border-radius: var(--radius-sm);
-        padding: var(--spacing-md);
+        padding: var(--spacing-2sm);
         transition: all 0.3s ease;
       }
 
@@ -576,7 +574,7 @@
         background: rgba(255, 152, 0, 0.1);
         border: 1px solid rgba(255, 152, 0, 0.3);
         border-radius: var(--radius-sm);
-        padding: var(--spacing-sm);
+        padding: var(--spacing-2sm);
         margin-top: var(--spacing-sm);
         display: flex;
         align-items: center;
@@ -623,11 +621,11 @@
         0%,
         100% {
           transform: scale(1);
-          opacity: 1;
+          opacity: 100%;
         }
         50% {
           transform: scale(1.05);
-          opacity: 0.8;
+          opacity: 0%.8;
         }
       }
 
@@ -737,7 +735,6 @@
       .btn-secondary:hover {
         background: rgba(255, 255, 255, 0.1);
         border-color: rgba(255, 255, 255, 0.3);
-        transform: translateY(-2px);
       }
 
       /* Responsive */
@@ -896,6 +893,7 @@
 
     <!-- JavaScript -->
     <script type="module" src="/scripts/components/unified-navigation.ts"></script>
+    <script type="module" src="/scripts/role-switch.ts"></script>
     <script>
       // Authentication Check
       const token = localStorage.getItem('token');
@@ -932,7 +930,10 @@
       // Load current profile data
       async function loadProfile() {
         try {
-          const response = await fetch('/api/user/profile', {
+          const useV2Users = window.FEATURE_FLAGS?.USE_API_V2_USERS;
+          const endpoint = useV2Users ? '/api/v2/users/me' : '/api/user/profile';
+
+          const response = await fetch(endpoint, {
             headers: {
               Authorization: `Bearer ${token}`,
             },
@@ -940,32 +941,35 @@
 
           if (response.ok) {
             const data = await response.json();
-            console.log('[Root Profile] API Response:', data);
+            console.info('[Root Profile] API Response:', data);
 
             // Handle different response formats
             const user = data.data || data.user || data;
 
+            // Handle both camelCase (v2) and snake_case (v1)
+            const firstName = user.firstName || user.first_name || '';
+            const lastName = user.lastName || user.last_name || '';
+            const profilePicture = user.profilePictureUrl || user.profile_picture || '';
+
             // Fill form fields
             document.getElementById('email').value = user.email || '';
-            document.getElementById('first_name').value = user.first_name || '';
-            document.getElementById('last_name').value = user.last_name || '';
+            document.getElementById('first_name').value = firstName;
+            document.getElementById('last_name').value = lastName;
 
             // Load profile picture if exists
-            if (user.profile_picture) {
-              displayProfilePicture(user.profile_picture);
+            if (profilePicture) {
+              displayProfilePicture(profilePicture);
               // Header wird automatisch durch header-user-info.ts aktualisiert
             } else {
               // Show initials if no profile picture
               const container = document.getElementById('profile-picture-display');
               if (container) {
-                const firstName = user.first_name || '';
-                const lastName = user.last_name || '';
                 const firstInitial = firstName.charAt(0).toUpperCase() || '';
                 const lastInitial = lastName.charAt(0).toUpperCase() || '';
                 const initials = firstInitial || lastInitial ? `${firstInitial}${lastInitial}` : 'U';
 
-                console.log('[Root Profile] User data:', user);
-                console.log('[Root Profile] Setting initials:', { firstName, lastName, initials });
+                console.info('[Root Profile] User data:', user);
+                console.info('[Root Profile] Setting initials:', { firstName, lastName, initials });
                 container.classList.add('avatar-initials');
                 container.innerHTML = initials;
               }
@@ -991,7 +995,10 @@
             const data = Object.fromEntries(formData);
 
             try {
-              const response = await fetch('/api/user/profile', {
+              const useV2Users = window.FEATURE_FLAGS?.USE_API_V2_USERS;
+              const endpoint = useV2Users ? '/api/v2/users/me/profile' : '/api/user/profile';
+
+              const response = await fetch(endpoint, {
                 method: 'PUT',
                 headers: {
                   'Content-Type': 'application/json',
@@ -1035,7 +1042,10 @@
             const data = Object.fromEntries(formData);
 
             try {
-              const response = await fetch('/api/users/profile/password', {
+              const useV2Users = window.FEATURE_FLAGS?.USE_API_V2_USERS;
+              const endpoint = useV2Users ? '/api/v2/users/me/password' : '/api/users/profile/password';
+
+              const response = await fetch(endpoint, {
                 method: 'PUT',
                 headers: {
                   'Content-Type': 'application/json',
@@ -1073,7 +1083,10 @@
             formData.append('profilePicture', file);
 
             try {
-              const response = await fetch('/api/user/profile-picture', {
+              const useV2Users = window.FEATURE_FLAGS?.USE_API_V2_USERS;
+              const endpoint = useV2Users ? '/api/v2/users/me/profile-picture' : '/api/user/profile-picture';
+
+              const response = await fetch(endpoint, {
                 method: 'POST',
                 headers: {
                   Authorization: `Bearer ${token}`,
@@ -1102,7 +1115,10 @@
             if (!confirm('Möchten Sie Ihr Profilbild wirklich entfernen?')) return;
 
             try {
-              const response = await fetch('/api/user/profile-picture', {
+              const useV2Users = window.FEATURE_FLAGS?.USE_API_V2_USERS;
+              const endpoint = useV2Users ? '/api/v2/users/me/profile-picture' : '/api/user/profile-picture';
+
+              const response = await fetch(endpoint, {
                 method: 'DELETE',
                 headers: {
                   Authorization: `Bearer ${token}`,
@@ -1203,7 +1219,10 @@
       // Approval Functions
       async function loadPendingApprovals() {
         try {
-          const response = await fetch('/api/root/deletion-approvals/pending', {
+          const useV2Root = window.FEATURE_FLAGS?.USE_API_V2_ROOT;
+          const endpoint = useV2Root ? '/api/v2/root/deletion-approvals/pending' : '/api/root/deletion-approvals/pending';
+
+          const response = await fetch(endpoint, {
             headers: {
               Authorization: `Bearer ${token}`,
             },
@@ -1212,7 +1231,7 @@
           if (!response.ok) throw new Error('Failed to load approvals');
 
           const data = await response.json();
-          console.log('Deletion approvals response:', data);
+          console.info('Deletion approvals response:', data);
 
           let approvals = [];
           if (data && data.success && Array.isArray(data.data)) {
@@ -1221,7 +1240,7 @@
             approvals = data;
           }
 
-          console.log('Processed approvals:', approvals);
+          console.info('Processed approvals:', approvals);
 
           const approvalSection = document.getElementById('approvalSection');
           const approvalList = document.getElementById('approvalList');
@@ -1299,7 +1318,12 @@
         }
 
         try {
-          const response = await fetch(`/api/root/deletion-approvals/${queueId}/approve`, {
+          const useV2Root = window.FEATURE_FLAGS?.USE_API_V2_ROOT;
+          const endpoint = useV2Root
+            ? `/api/v2/root/deletion-approvals/${queueId}/approve`
+            : `/api/root/deletion-approvals/${queueId}/approve`;
+
+          const response = await fetch(endpoint, {
             method: 'POST',
             headers: {
               Authorization: `Bearer ${token}`,
@@ -1325,7 +1349,12 @@
         if (!reason) return;
 
         try {
-          const response = await fetch(`/api/root/deletion-approvals/${queueId}/reject`, {
+          const useV2Root = window.FEATURE_FLAGS?.USE_API_V2_ROOT;
+          const endpoint = useV2Root
+            ? `/api/v2/root/deletion-approvals/${queueId}/reject`
+            : `/api/root/deletion-approvals/${queueId}/reject`;
+
+          const response = await fetch(endpoint, {
             method: 'POST',
             headers: {
               Authorization: `Bearer ${token}`,

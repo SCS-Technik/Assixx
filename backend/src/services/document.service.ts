@@ -204,7 +204,7 @@ class DocumentService {
       );
       const total =
         Array.isArray(countRows) && countRows.length > 0
-          ? countRows[0].total
+          ? (countRows[0].total as number)
           : 0;
 
       // Add ordering and pagination
@@ -221,7 +221,7 @@ class DocumentService {
           limit,
         ),
       };
-    } catch (error) {
+    } catch (error: unknown) {
       logger.error("Error in document service getDocuments:", error);
       throw error;
     }
@@ -249,14 +249,14 @@ class DocumentService {
         size: 0, // Would need to be calculated
         file_size: 0,
         uploaded_by: doc.user_id,
-        category: doc.category ?? "other",
+        category: doc.category || "other",
         recipient_type: "user", // Default
         scope: "personal", // Default
-        created_at: doc.upload_date?.toISOString() ?? new Date().toISOString(),
-        updated_at: doc.upload_date?.toISOString() ?? new Date().toISOString(),
-        is_deleted: doc.is_archived ?? false,
+        created_at: doc.upload_date.toISOString(),
+        updated_at: doc.upload_date.toISOString(),
+        is_deleted: doc.is_archived,
       } as DocumentData;
-    } catch (error) {
+    } catch (error: unknown) {
       logger.error("Error in document service getDocumentById:", error);
       throw error;
     }
@@ -279,7 +279,10 @@ class DocumentService {
             ? documentData.description
             : undefined,
         tenant_id: documentData.tenant_id,
-        recipientType: documentData.userId ? "user" : "company",
+        recipientType:
+          documentData.userId != null && documentData.userId !== 0
+            ? "user"
+            : "company",
         teamId: null,
         departmentId: null,
       };
@@ -287,7 +290,7 @@ class DocumentService {
       // The model will handle setting created_by, original_name, file_path, file_size, mime_type
       const documentId = await Document.create(modelData);
       return await this.getDocumentById(documentId, documentData.tenant_id);
-    } catch (error) {
+    } catch (error: unknown) {
       logger.error("Error in document service createDocument:", error);
       throw error;
     }
@@ -312,12 +315,11 @@ class DocumentService {
         fileName: updateData.name,
         description:
           updateData.description !== null ? updateData.description : undefined,
-        category:
-          updateData.category !== null ? updateData.category : undefined,
+        category: updateData.category ?? undefined,
       };
       await Document.update(documentId, modelUpdateData);
       return true;
-    } catch (error) {
+    } catch (error: unknown) {
       logger.error("Error in document service updateDocument:", error);
       throw error;
     }
@@ -341,14 +343,14 @@ class DocumentService {
       try {
         const filePath = path.join(this.uploadDir, document.filename);
         await fs.unlink(filePath);
-      } catch (fileError) {
+      } catch (fileError: unknown) {
         logger.warn("Error deleting file:", fileError);
       }
 
       // Delete database record
       await Document.delete(documentId);
       return true;
-    } catch (error) {
+    } catch (error: unknown) {
       logger.error("Error in document service deleteDocument:", error);
       throw error;
     }
@@ -392,15 +394,15 @@ class DocumentService {
             file_size: 0,
             uploaded_by: doc.user_id,
             description: doc.description ?? "",
-            category: doc.category ?? "other",
+            category: doc.category || "other",
             recipient_type: "user", // Default
             scope: "personal", // Default
             created_at: doc.upload_date.toISOString(),
             updated_at: doc.upload_date.toISOString(),
-            is_deleted: doc.is_archived ?? false,
+            is_deleted: doc.is_archived,
           }) as DocumentData,
       );
-    } catch (error) {
+    } catch (error: unknown) {
       logger.error("Error in document service getDocumentsByUser:", error);
       throw error;
     }
@@ -409,7 +411,7 @@ class DocumentService {
   /**
    * Get document statistics
    */
-  async getDocumentStats(_tenantId: number): Promise<DocumentStats> {
+  getDocumentStats(_tenantId: number): DocumentStats {
     try {
       // TODO: Implement getStats method in Document model
       // const stats = await Document.getStats(tenantId) as RawDocumentStats;
@@ -423,11 +425,14 @@ class DocumentService {
         byCategory: stats.byCategory ?? {},
         totalSize: stats.totalSize ?? 0,
         averageSize:
-          stats.total && stats.total > 0 && stats.totalSize
+          stats.total != null &&
+          stats.total > 0 &&
+          stats.totalSize != null &&
+          stats.totalSize > 0
             ? Math.round(stats.totalSize / stats.total)
             : 0,
       };
-    } catch (error) {
+    } catch (error: unknown) {
       logger.error("Error in document service getDocumentStats:", error);
       throw error;
     }
@@ -450,7 +455,7 @@ class DocumentService {
 
       await executeQuery(query, [documentId, userId, tenant_id]);
       return true;
-    } catch (error) {
+    } catch (error: unknown) {
       logger.error("Error marking document as read:", error);
       return false;
     }

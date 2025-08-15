@@ -16,8 +16,10 @@ Multi-Tenant-Isolation--> tenant_id = Eine Firma-> vergesse das nicht ! Es darf 
 
 ## KRITISCHE REGELN
 
-- **NIEMALS committen oder pushen ohne Erlaubnis vom User**
+- **NIEMALS committen oder pushen ohne Erlaubnis vom User** immer um Freigabe bitten
+- **NIEMALS checkout ohne Erlaubnis vom User** immer um Freigabe bitten
 - **NIEMALS Fast-Forward merge durchführen**
+- **NIEMALS disable eslint kommentare benutzen, immer den besten Weg gehen um den bestmöglichen und sicheren strengen Code zu schreiben**
 - **IMMER existierende Dateien bearbeiten statt neue erstellen**
 - **IMMER Docker aus /home/scs/projects/Assixx/docker starten**
 - **IMMER langfristig denken - keine Quick-Fixes die später Probleme machen**
@@ -139,7 +141,7 @@ docker-compose ps && curl -s http://localhost:3000/health | jq '.'
 **WENN TypeScript Error bei Route Handler**
 
 - typed.auth oder typed.body wrapper verwenden
-- Siehe backend/TYPESCRIPT-ARCHITECTURE-GUIDE.md
+- Siehe docs/TYPESCRIPT-STANDARDS.md
 
 **WENN User will committen/pushen**
 
@@ -177,7 +179,14 @@ docker-compose ps && curl -s http://localhost:3000/health | jq '.'
 7. README.md
 8. Database Migration Guide
 9. BEFORE-STARTING-DEV befolgen (Anleitung lesen und Befehle durchführen)!!!!
-10. Entwicklung beginnen
+10. DAILY-PROGRESS.md lesen
+11. Lies API-V2-MIGRATION-MASTERPLAN.md
+12. Lies API-V2-MASTERPLAN-CHECKLIST.md
+13. Lies API-V2-MIGRATION-EXECUTIVE-SUMMARY.md
+14. Lies API-V2-FRONTEND-MIGRATION-DETAILS.md
+15. Lies workshop-decisions.md
+16. Lies API-DESIGN-WORKSHOP-PLAN.md
+17. Entwicklung beginnen
 
 ## 📊 FORTSCHRITTS-DOKUMENTATION (NEU! WICHTIG!)
 
@@ -207,7 +216,7 @@ docker-compose ps && curl -s http://localhost:3000/health | jq '.'
 **KERN-DOKUMENTE (Täglich relevant):**
 
 - docs/PROJEKTSTRUKTUR.md - Vollständige Verzeichnisstruktur
-- backend/TYPESCRIPT-ARCHITECTURE-GUIDE.md - TypeScript Patterns (PFLICHT bei Backend)
+- docs/TYPESCRIPT-STANDARDS.md - TypeScript Patterns (PFLICHT bei Backend)
 - docs/DATABASE-MIGRATION-GUIDE.md - DB Änderungen (PFLICHT bei Migrationen)
 - docs/DESIGN-STANDARDS.md - Glassmorphismus UI/UX
 
@@ -300,7 +309,7 @@ docker logs -f assixx-backend
 docker exec assixx-backend pnpm run type-check
 docker exec assixx-backend pnpm run lint:fix
 docker exec assixx-backend pnpm run format
-docker exec assixx-backend pnpm run build:ts
+docker exec assixx-backend pnpm run build
 ```
 
 ### Git
@@ -360,7 +369,7 @@ weitere Notes:
 ## Aktuelle Notizen (26.06.2025)
 
 - **WICHTIG:** TypeScript Architecture Guide ist PFLICHTLEKTÜRE für Backend-Entwicklung
-- **NEU:** backend/TYPESCRIPT-ARCHITECTURE-GUIDE.md muss IMMER beachtet werden
+- **NEU:** docs/TYPESCRIPT-STANDARDS.md muss IMMER beachtet werden
 - TypeScript Migration abgeschlossen: 426 → 0 Errors
 - Shift Planning Design wurde in FEATURES.md integriert
 - Reminder für Sub-Features wurde in TODO.md aufgenommen
@@ -376,7 +385,7 @@ weitere Notes:
 **PFLICHT bei Backend-Entwicklung:**
 
 ```bash
-cat /home/scs/projects/Assixx/backend/TYPESCRIPT-ARCHITECTURE-GUIDE.md
+cat /home/scs/projects/Assixx/docs/TYPESCRIPT-STANDARDS.md
 ``
 Diese Dokumentation enthält:
 

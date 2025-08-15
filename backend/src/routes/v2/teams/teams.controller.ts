@@ -5,11 +5,21 @@
 
 import { Response } from "express";
 
-import { AuthenticatedRequest } from "../../../types/request.types.js";
+import RootLog from "../../../models/rootLog";
+import type { AuthenticatedRequest } from "../../../types/request.types.js";
 import { successResponse, errorResponse } from "../../../utils/apiResponse.js";
 import { logger } from "../../../utils/logger.js";
 
 import { teamsService, ServiceError } from "./teams.service.js";
+
+interface Team {
+  id: number;
+  name: string;
+  description?: string;
+  departmentId?: number;
+  leaderId?: number;
+  [key: string]: unknown;
+}
 
 // Request body types
 interface CreateTeamBody {
@@ -28,6 +38,10 @@ interface UpdateTeamBody {
 
 interface AddMemberBody {
   userId: number;
+}
+
+interface AddMachineBody {
+  machineId: number;
 }
 
 export class TeamsController {
@@ -53,7 +67,7 @@ export class TeamsController {
       const teams = await teamsService.listTeams(req.user.tenant_id, filters);
 
       res.json(successResponse(teams));
-    } catch (error) {
+    } catch (error: unknown) {
       logger.error("Error in listTeams:", error);
       if (error instanceof ServiceError) {
         res
@@ -88,7 +102,7 @@ export class TeamsController {
       const team = await teamsService.getTeamById(teamId, req.user.tenant_id);
 
       res.json(successResponse(team));
-    } catch (error) {
+    } catch (error: unknown) {
       logger.error("Error in getTeamById:", error);
       if (error instanceof ServiceError) {
         res
@@ -129,8 +143,28 @@ export class TeamsController {
       }
       const team = await teamsService.createTeam(teamData, req.user.tenant_id);
 
+      // Log team creation
+      await RootLog.create({
+        tenant_id: req.user.tenant_id,
+        user_id: req.user.id,
+        action: "create",
+        entity_type: "team",
+        entity_id: (team as Team).id,
+        details: `Erstellt: ${teamData.name}`,
+        new_values: {
+          name: teamData.name,
+          description: teamData.description,
+          department_id: teamData.departmentId,
+          leader_id: teamData.leaderId,
+          created_by: req.user.email,
+        },
+        ip_address: req.ip ?? req.socket.remoteAddress,
+        user_agent: req.get("user-agent"),
+        was_role_switched: false,
+      });
+
       res.status(201).json(successResponse(team, "Team created successfully"));
-    } catch (error) {
+    } catch (error: unknown) {
       logger.error("Error in createTeam:", error);
       if (error instanceof ServiceError) {
         res
@@ -170,14 +204,46 @@ export class TeamsController {
           .json(errorResponse("UNAUTHORIZED", "User not authenticated"));
         return;
       }
+      // Get old team data for logging
+      const oldTeam = await teamsService.getTeamById(
+        teamId,
+        req.user.tenant_id,
+      );
+
       const team = await teamsService.updateTeam(
         teamId,
         updateData,
         req.user.tenant_id,
       );
 
+      // Log team update
+      await RootLog.create({
+        tenant_id: req.user.tenant_id,
+        user_id: req.user.id,
+        action: "update",
+        entity_type: "team",
+        entity_id: teamId,
+        details: `Aktualisiert: ${updateData.name}`,
+        old_values: {
+          name: (oldTeam as Team | null)?.name,
+          description: (oldTeam as Team | null)?.description,
+          department_id: (oldTeam as Team | null)?.departmentId,
+          leader_id: (oldTeam as Team | null)?.leaderId,
+        },
+        new_values: {
+          name: updateData.name,
+          description: updateData.description,
+          department_id: updateData.departmentId,
+          leader_id: updateData.leaderId,
+          updated_by: req.user.email,
+        },
+        ip_address: req.ip ?? req.socket.remoteAddress,
+        user_agent: req.get("user-agent"),
+        was_role_switched: false,
+      });
+
       res.json(successResponse(team, "Team updated successfully"));
-    } catch (error) {
+    } catch (error: unknown) {
       logger.error("Error in updateTeam:", error);
       if (error instanceof ServiceError) {
         res
@@ -209,10 +275,36 @@ export class TeamsController {
           .json(errorResponse("UNAUTHORIZED", "User not authenticated"));
         return;
       }
+      // Get team data before deletion for logging
+      const deletedTeam = await teamsService.getTeamById(
+        teamId,
+        req.user.tenant_id,
+      );
+
       const result = await teamsService.deleteTeam(teamId, req.user.tenant_id);
 
+      // Log team deletion
+      await RootLog.create({
+        tenant_id: req.user.tenant_id,
+        user_id: req.user.id,
+        action: "delete",
+        entity_type: "team",
+        entity_id: teamId,
+        details: `Gelöscht: ${String((deletedTeam as Team | null)?.name)}`,
+        old_values: {
+          name: (deletedTeam as Team | null)?.name,
+          description: (deletedTeam as Team | null)?.description,
+          department_id: (deletedTeam as Team | null)?.departmentId,
+          leader_id: (deletedTeam as Team | null)?.leaderId,
+          deleted_by: req.user.email,
+        },
+        ip_address: req.ip ?? req.socket.remoteAddress,
+        user_agent: req.get("user-agent"),
+        was_role_switched: false,
+      });
+
       res.json(successResponse(result));
-    } catch (error) {
+    } catch (error: unknown) {
       logger.error("Error in deleteTeam:", error);
       if (error instanceof ServiceError) {
         res
@@ -253,7 +345,7 @@ export class TeamsController {
       );
 
       res.json(successResponse(members));
-    } catch (error) {
+    } catch (error: unknown) {
       logger.error("Error in getTeamMembers:", error);
       if (error instanceof ServiceError) {
         res
@@ -294,8 +386,25 @@ export class TeamsController {
         req.user.tenant_id,
       );
 
+      // Log team member addition
+      await RootLog.create({
+        tenant_id: req.user.tenant_id,
+        user_id: req.user.id,
+        action: "add_member",
+        entity_type: "team",
+        entity_id: teamId,
+        details: `Mitglied hinzugefügt`,
+        new_values: {
+          user_id: userId,
+          added_by: req.user.email,
+        },
+        ip_address: req.ip ?? req.socket.remoteAddress,
+        user_agent: req.get("user-agent"),
+        was_role_switched: false,
+      });
+
       res.status(201).json(successResponse(result));
-    } catch (error) {
+    } catch (error: unknown) {
       logger.error("Error in addTeamMember:", error);
       if (error instanceof ServiceError) {
         res
@@ -339,7 +448,7 @@ export class TeamsController {
       );
 
       res.json(successResponse(result));
-    } catch (error) {
+    } catch (error: unknown) {
       logger.error("Error in removeTeamMember:", error);
       if (error instanceof ServiceError) {
         res
@@ -355,6 +464,156 @@ export class TeamsController {
         res
           .status(500)
           .json(errorResponse("SERVER_ERROR", "Failed to remove team member"));
+      }
+    }
+  }
+
+  /**
+   * Get team machines
+   */
+  async getTeamMachines(
+    req: AuthenticatedRequest,
+    res: Response,
+  ): Promise<void> {
+    try {
+      const teamId = parseInt(req.params.id);
+      if (!req.user) {
+        res
+          .status(401)
+          .json(errorResponse("UNAUTHORIZED", "User not authenticated"));
+        return;
+      }
+      const machines = await teamsService.getTeamMachines(
+        teamId,
+        req.user.tenant_id,
+      );
+
+      res.json(successResponse(machines));
+    } catch (error: unknown) {
+      logger.error("Error in getTeamMachines:", error);
+      if (error instanceof ServiceError) {
+        res
+          .status(error.statusCode)
+          .json(
+            errorResponse(
+              error.code,
+              error.message,
+              error.details as { field: string; message: string }[] | undefined,
+            ),
+          );
+      } else {
+        res
+          .status(500)
+          .json(errorResponse("SERVER_ERROR", "Failed to get team machines"));
+      }
+    }
+  }
+
+  /**
+   * Add machine to team
+   */
+  async addTeamMachine(
+    req: AuthenticatedRequest,
+    res: Response,
+  ): Promise<void> {
+    try {
+      const teamId = parseInt(req.params.id);
+      const body = req.body as AddMachineBody;
+      const machineId = body.machineId;
+
+      if (!req.user) {
+        res
+          .status(401)
+          .json(errorResponse("UNAUTHORIZED", "User not authenticated"));
+        return;
+      }
+      const result = await teamsService.addTeamMachine(
+        teamId,
+        machineId,
+        req.user.tenant_id,
+        req.user.id,
+      );
+
+      // Log team machine addition
+      await RootLog.create({
+        tenant_id: req.user.tenant_id,
+        user_id: req.user.id,
+        action: "add_machine",
+        entity_type: "team",
+        entity_id: teamId,
+        details: `Maschine hinzugefügt`,
+        new_values: {
+          machine_id: machineId,
+          added_by: req.user.email,
+        },
+        ip_address: req.ip ?? req.socket.remoteAddress,
+        user_agent: req.get("user-agent"),
+        was_role_switched: false,
+      });
+
+      res.status(201).json(successResponse(result));
+    } catch (error: unknown) {
+      logger.error("Error in addTeamMachine:", error);
+      if (error instanceof ServiceError) {
+        res
+          .status(error.statusCode)
+          .json(
+            errorResponse(
+              error.code,
+              error.message,
+              error.details as { field: string; message: string }[] | undefined,
+            ),
+          );
+      } else {
+        res
+          .status(500)
+          .json(errorResponse("SERVER_ERROR", "Failed to add machine to team"));
+      }
+    }
+  }
+
+  /**
+   * Remove machine from team
+   */
+  async removeTeamMachine(
+    req: AuthenticatedRequest,
+    res: Response,
+  ): Promise<void> {
+    try {
+      const teamId = parseInt(req.params.id);
+      const machineId = parseInt(req.params.machineId);
+
+      if (!req.user) {
+        res
+          .status(401)
+          .json(errorResponse("UNAUTHORIZED", "User not authenticated"));
+        return;
+      }
+      const result = await teamsService.removeTeamMachine(
+        teamId,
+        machineId,
+        req.user.tenant_id,
+      );
+
+      res.json(successResponse(result));
+    } catch (error: unknown) {
+      logger.error("Error in removeTeamMachine:", error);
+      if (error instanceof ServiceError) {
+        res
+          .status(error.statusCode)
+          .json(
+            errorResponse(
+              error.code,
+              error.message,
+              error.details as { field: string; message: string }[] | undefined,
+            ),
+          );
+      } else {
+        res
+          .status(500)
+          .json(
+            errorResponse("SERVER_ERROR", "Failed to remove machine from team"),
+          );
       }
     }
   }

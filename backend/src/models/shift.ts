@@ -18,7 +18,7 @@ import User from "./user";
 export function formatDateForMysql(
   dateString: string | Date | null,
 ): string | null {
-  if (!dateString) return null;
+  if (dateString == null || dateString === "") return null;
   const date = new Date(dateString);
   return date.toISOString().slice(0, 19).replace("T", " ");
 }
@@ -29,7 +29,7 @@ export function formatDateForMysql(
 export function formatDateOnlyForMysql(
   dateString: string | Date | null,
 ): string | null {
-  if (!dateString) return null;
+  if (dateString == null || dateString === "") return null;
   const date = new Date(dateString);
   return date.toISOString().slice(0, 10);
 }
@@ -86,7 +86,7 @@ interface DbShift extends RowDataPacket {
   template_name?: string | null;
   template_color?: string | null;
   assignments?: string | null;
-  assignedEmployees?: Array<{ name: string; status: string }>;
+  assignedEmployees?: { name: string; status: string }[];
   assignment_status?: string;
   assigned_at?: Date;
   plan_name?: string;
@@ -254,7 +254,7 @@ export async function getShiftTemplates(
       tenantId,
     ]);
     return templates;
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Error in getShiftTemplates:", error);
     throw error;
   }
@@ -292,8 +292,8 @@ export async function createShiftTemplate(
     }
 
     const query = `
-      INSERT INTO shift_templates 
-      (tenant_id, name, description, start_time, end_time, duration_hours, 
+      INSERT INTO shift_templates
+      (tenant_id, name, description, start_time, end_time, duration_hours,
        break_minutes, color, created_by)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
@@ -317,7 +317,7 @@ export async function createShiftTemplate(
     );
 
     return created[0];
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Error in createShiftTemplate:", error);
     throw error;
   }
@@ -383,30 +383,28 @@ export async function getShiftPlans(
     }
 
     // Apply filters
-    if (department_id) {
+    if (department_id != null && department_id !== 0) {
       query += " AND sp.department_id = ?";
       queryParams.push(department_id);
     }
 
-    if (team_id) {
+    if (team_id != null && team_id !== 0) {
       query += " AND sp.team_id = ?";
       queryParams.push(team_id);
     }
 
-    if (start_date) {
+    if (start_date != null && start_date !== "") {
       query += " AND sp.end_date >= ?";
       queryParams.push(start_date);
     }
 
-    if (end_date) {
+    if (end_date != null && end_date !== "") {
       query += " AND sp.start_date <= ?";
       queryParams.push(end_date);
     }
 
-    if (status) {
-      query += " AND sp.status = ?";
-      queryParams.push(status);
-    }
+    query += " AND sp.status = ?";
+    queryParams.push(status);
 
     // Apply pagination
     const offset = (page - 1) * limit;
@@ -438,30 +436,28 @@ export async function getShiftPlans(
     }
 
     // Apply same filters for count
-    if (department_id) {
+    if (department_id != null && department_id !== 0) {
       countQuery += " AND sp.department_id = ?";
       countParams.push(department_id);
     }
 
-    if (team_id) {
+    if (team_id != null && team_id !== 0) {
       countQuery += " AND sp.team_id = ?";
       countParams.push(team_id);
     }
 
-    if (start_date) {
+    if (start_date != null && start_date !== "") {
       countQuery += " AND sp.end_date >= ?";
       countParams.push(start_date);
     }
 
-    if (end_date) {
+    if (end_date != null && end_date !== "") {
       countQuery += " AND sp.start_date <= ?";
       countParams.push(end_date);
     }
 
-    if (status) {
-      countQuery += " AND sp.status = ?";
-      countParams.push(status);
-    }
+    countQuery += " AND sp.status = ?";
+    countParams.push(status);
 
     const [countResult] = await executeQuery<CountResult[]>(
       countQuery,
@@ -478,7 +474,7 @@ export async function getShiftPlans(
         totalPages: Math.ceil(total / limit),
       },
     };
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Error in getShiftPlans:", error);
     throw error;
   }
@@ -503,7 +499,7 @@ export async function createShiftPlan(
     } = planData;
 
     // Validate required fields
-    if (!tenant_id || !name || !start_date || !end_date || !created_by) {
+    if (tenant_id === 0 || name === "" || created_by === 0) {
       throw new Error("Missing required fields");
     }
 
@@ -513,7 +509,7 @@ export async function createShiftPlan(
     }
 
     const query = `
-      INSERT INTO shift_plans 
+      INSERT INTO shift_plans
       (tenant_id, name, description, start_date, end_date, department_id, team_id, created_by)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `;
@@ -536,7 +532,7 @@ export async function createShiftPlan(
     );
 
     return created[0];
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Error in createShiftPlan:", error);
     throw error;
   }
@@ -576,7 +572,7 @@ export async function getShiftsByPlan(
 
     // Parse assignments string into array
     shifts.forEach((shift) => {
-      if (shift.assignments) {
+      if (shift.assignments != null && shift.assignments !== "") {
         shift.assignedEmployees = shift.assignments
           .split("; ")
           .map((assignment) => {
@@ -590,7 +586,7 @@ export async function getShiftsByPlan(
     });
 
     return shifts;
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Error in getShiftsByPlan:", error);
     throw error;
   }
@@ -614,19 +610,18 @@ export async function createShift(shiftData: ShiftData): Promise<DbShift> {
 
     // Validate required fields
     if (
-      !tenant_id ||
-      !plan_id ||
-      !date ||
-      !start_time ||
-      !end_time ||
-      !created_by
+      tenant_id === 0 ||
+      plan_id === 0 ||
+      start_time === "" ||
+      end_time === "" ||
+      created_by === 0
     ) {
       throw new Error("Missing required fields");
     }
 
     const query = `
-      INSERT INTO shifts 
-      (tenant_id, plan_id, template_id, date, start_time, end_time, 
+      INSERT INTO shifts
+      (tenant_id, plan_id, template_id, date, start_time, end_time,
        required_employees, created_by)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `;
@@ -649,7 +644,7 @@ export async function createShift(shiftData: ShiftData): Promise<DbShift> {
     );
 
     return created[0];
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Error in createShift:", error);
     throw error;
   }
@@ -690,7 +685,7 @@ export async function assignEmployeeToShift(
 
       const [dayAssignments] = await executeQuery<RowDataPacket[]>(
         `
-        SELECT sa.*, s.start_time, s.end_time 
+        SELECT sa.*, s.start_time, s.end_time
         FROM shift_assignments sa
         JOIN shifts s ON sa.shift_id = s.id
         WHERE sa.user_id = ? AND s.date = ? AND s.tenant_id = ?
@@ -706,7 +701,7 @@ export async function assignEmployeeToShift(
     }
 
     const query = `
-      INSERT INTO shift_assignments 
+      INSERT INTO shift_assignments
       (tenant_id, shift_id, user_id, assigned_by)
       VALUES (?, ?, ?, ?)
     `;
@@ -730,7 +725,7 @@ export async function assignEmployeeToShift(
     );
 
     return created[0];
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Error in assignEmployeeToShift:", error);
     throw error;
   }
@@ -748,7 +743,7 @@ export async function getEmployeeAvailability(
   try {
     const query = `
       SELECT * FROM employee_availability
-      WHERE tenant_id = ? AND user_id = ? 
+      WHERE tenant_id = ? AND user_id = ?
       AND date >= ? AND date <= ?
       ORDER BY date ASC
     `;
@@ -761,7 +756,7 @@ export async function getEmployeeAvailability(
     ]);
 
     return availability;
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Error in getEmployeeAvailability:", error);
     throw error;
   }
@@ -785,7 +780,7 @@ export async function setEmployeeAvailability(
     } = availabilityData;
 
     // Validate required fields
-    if (!tenant_id || !user_id || !date || !availability_type) {
+    if (tenant_id === 0 || user_id === 0) {
       throw new Error("Missing required fields");
     }
 
@@ -798,7 +793,7 @@ export async function setEmployeeAvailability(
     if (existing.length > 0) {
       // Update existing
       const query = `
-        UPDATE employee_availability 
+        UPDATE employee_availability
         SET availability_type = ?, start_time = ?, end_time = ?, notes = ?, updated_at = NOW()
         WHERE id = ?
       `;
@@ -821,7 +816,7 @@ export async function setEmployeeAvailability(
     } else {
       // Create new
       const query = `
-        INSERT INTO employee_availability 
+        INSERT INTO employee_availability
         (tenant_id, user_id, date, availability_type, start_time, end_time, notes)
         VALUES (?, ?, ?, ?, ?, ?, ?)
       `;
@@ -843,7 +838,7 @@ export async function setEmployeeAvailability(
 
       return created[0];
     }
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Error in setEmployeeAvailability:", error);
     throw error;
   }
@@ -861,7 +856,7 @@ export async function getShiftExchangeRequests(
     const { status = "pending", limit = 50 } = options;
 
     const query = `
-      SELECT ser.*, 
+      SELECT ser.*,
              s.date, s.start_time, s.end_time,
              st.name as shift_template_name,
              u1.first_name as requester_first_name, u1.last_name as requester_last_name,
@@ -885,7 +880,7 @@ export async function getShiftExchangeRequests(
       limit,
     ]);
     return requests;
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Error in getShiftExchangeRequests:", error);
     throw error;
   }
@@ -909,12 +904,12 @@ export async function createShiftExchangeRequest(
     } = requestData;
 
     // Validate required fields
-    if (!tenant_id || !shift_id || !requester_id || !exchange_type) {
+    if (!tenant_id || !shift_id || !requester_id) {
       throw new Error("Missing required fields");
     }
 
     const query = `
-      INSERT INTO shift_exchange_requests 
+      INSERT INTO shift_exchange_requests
       (tenant_id, shift_id, requester_id, target_user_id, exchange_type, target_shift_id, message)
       VALUES (?, ?, ?, ?, ?, ?, ?)
     `;
@@ -936,7 +931,7 @@ export async function createShiftExchangeRequest(
     );
 
     return created[0];
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Error in createShiftExchangeRequest:", error);
     throw error;
   }
@@ -989,7 +984,7 @@ export async function canAccessShiftPlan(
     }
 
     return false;
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Error in canAccessShiftPlan:", error);
     throw error;
   }
@@ -1026,7 +1021,7 @@ export async function getEmployeeShifts(
     ]);
 
     return shifts;
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Error in getEmployeeShifts:", error);
     throw error;
   }
@@ -1040,7 +1035,7 @@ async function getShiftsForDateRange(
 ): Promise<ShiftQueryResult[]> {
   try {
     const query = `
-      SELECT 
+      SELECT
         s.*,
         u.username as assigned_user_name,
         u.first_name,
@@ -1052,7 +1047,7 @@ async function getShiftsForDateRange(
       LEFT JOIN users u ON sa.user_id = u.id
       LEFT JOIN departments d ON s.department_id = d.id
       LEFT JOIN teams t ON s.team_id = t.id
-      WHERE s.tenant_id = ? 
+      WHERE s.tenant_id = ?
         AND s.date BETWEEN ? AND ?
         AND s.deleted_at IS NULL
       ORDER BY s.date, s.start_time
@@ -1064,7 +1059,7 @@ async function getShiftsForDateRange(
       endDate,
     ]);
     return rows;
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Error in getShiftsForDateRange:", error);
     throw error;
   }
@@ -1078,11 +1073,11 @@ async function getWeekNotes(
 ): Promise<Record<string, string>> {
   try {
     const query = `
-      SELECT 
+      SELECT
         date,
         notes
       FROM shift_notes
-      WHERE tenant_id = ? 
+      WHERE tenant_id = ?
         AND date BETWEEN ? AND ?
       ORDER BY date
     `;
@@ -1100,7 +1095,7 @@ async function getWeekNotes(
     });
 
     return notesByDate;
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Error in getWeekNotes:", error);
     // Return empty object if table doesn't exist yet
     return {};
@@ -1222,7 +1217,7 @@ interface V2SwapRequestResult extends RowDataPacket {
 async function findAll(filters: V2ShiftFilters): Promise<V2ShiftData[]> {
   try {
     let query = `
-      SELECT s.*, 
+      SELECT s.*,
         st.name as template_name,
         st.color as template_color,
         u.username as user_name,
@@ -1240,48 +1235,53 @@ async function findAll(filters: V2ShiftFilters): Promise<V2ShiftData[]> {
 
     const queryParams: (string | number | null)[] = [filters.tenant_id];
 
-    if (filters.date) {
+    if (filters.date != null && filters.date !== "") {
       query += " AND s.date = ?";
       queryParams.push(formatDateOnlyForMysql(filters.date));
     }
 
-    if (filters.start_date && filters.end_date) {
+    if (
+      filters.start_date != null &&
+      filters.start_date !== "" &&
+      filters.end_date != null &&
+      filters.end_date !== ""
+    ) {
       query += " AND s.date BETWEEN ? AND ?";
       queryParams.push(formatDateOnlyForMysql(filters.start_date));
       queryParams.push(formatDateOnlyForMysql(filters.end_date));
     }
 
-    if (filters.user_id) {
+    if (filters.user_id != null && filters.user_id !== 0) {
       query += " AND s.user_id = ?";
       queryParams.push(filters.user_id);
     }
 
-    if (filters.department_id) {
+    if (filters.department_id != null && filters.department_id !== 0) {
       query += " AND s.department_id = ?";
       queryParams.push(filters.department_id);
     }
 
-    if (filters.team_id) {
+    if (filters.team_id != null && filters.team_id !== 0) {
       query += " AND s.team_id = ?";
       queryParams.push(filters.team_id);
     }
 
-    if (filters.status) {
+    if (filters.status != null && filters.status !== "") {
       query += " AND s.status = ?";
       queryParams.push(filters.status);
     }
 
-    if (filters.type) {
+    if (filters.type != null && filters.type !== "") {
       query += " AND s.type = ?";
       queryParams.push(filters.type);
     }
 
-    if (filters.template_id) {
+    if (filters.template_id != null && filters.template_id !== 0) {
       query += " AND s.template_id = ?";
       queryParams.push(filters.template_id);
     }
 
-    if (filters.plan_id) {
+    if (filters.plan_id != null && filters.plan_id !== 0) {
       query += " AND s.plan_id = ?";
       queryParams.push(filters.plan_id);
     }
@@ -1292,10 +1292,10 @@ async function findAll(filters: V2ShiftFilters): Promise<V2ShiftData[]> {
     query += ` ORDER BY s.${sortBy} ${sortOrder}`;
 
     // Pagination
-    if (filters.limit) {
+    if (filters.limit != null && filters.limit !== 0) {
       query += " LIMIT ?";
       queryParams.push(filters.limit);
-      if (filters.offset) {
+      if (filters.offset != null && filters.offset !== 0) {
         query += " OFFSET ?";
         queryParams.push(filters.offset);
       }
@@ -1303,7 +1303,7 @@ async function findAll(filters: V2ShiftFilters): Promise<V2ShiftData[]> {
 
     const [shifts] = await executeQuery<V2ShiftData[]>(query, queryParams);
     return shifts;
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Error in findAll:", error);
     throw error;
   }
@@ -1318,7 +1318,7 @@ async function findById(
 ): Promise<V2ShiftData | null> {
   try {
     const query = `
-      SELECT s.*, 
+      SELECT s.*,
         st.name as template_name,
         st.color as template_color,
         u.username as user_name,
@@ -1336,7 +1336,7 @@ async function findById(
 
     const [shifts] = await executeQuery<V2ShiftData[]>(query, [id, tenantId]);
     return shifts.length > 0 ? shifts[0] : null;
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Error in findById:", error);
     throw error;
   }
@@ -1348,9 +1348,9 @@ async function findById(
 async function create(data: Partial<V2ShiftData>): Promise<number> {
   try {
     const query = `
-      INSERT INTO shifts 
-      (tenant_id, user_id, plan_id, template_id, date, start_time, end_time, 
-       department_id, team_id, title, required_employees, break_minutes, 
+      INSERT INTO shifts
+      (tenant_id, user_id, plan_id, template_id, date, start_time, end_time,
+       department_id, team_id, title, required_employees, break_minutes,
        status, type, notes, created_by)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
@@ -1360,11 +1360,19 @@ async function create(data: Partial<V2ShiftData>): Promise<number> {
       data.user_id,
       data.plan_id ?? null,
       data.template_id ?? null,
-      formatDateOnlyForMysql(data.date as string), // date is required in ShiftCreateData
-      data.date && data.start_time
+      data.date != null && data.date !== ""
+        ? formatDateOnlyForMysql(data.date)
+        : null,
+      data.date != null &&
+      data.date !== "" &&
+      data.start_time != null &&
+      data.start_time !== ""
         ? formatDateForMysql(`${data.date} ${data.start_time}`)
         : null,
-      data.date && data.end_time
+      data.date != null &&
+      data.date !== "" &&
+      data.end_time != null &&
+      data.end_time !== ""
         ? formatDateForMysql(`${data.date} ${data.end_time}`)
         : null,
       data.department_id,
@@ -1379,7 +1387,7 @@ async function create(data: Partial<V2ShiftData>): Promise<number> {
     ]);
 
     return result.insertId;
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Error in create:", error);
     throw error;
   }
@@ -1396,13 +1404,19 @@ async function update(
   try {
     // Get current shift data if we need date for time conversion
     let currentDate: string | undefined;
-    if ((data.start_time || data.end_time) && !data.date) {
+    if (
+      ((data.start_time != null && data.start_time !== "") ||
+        (data.end_time != null && data.end_time !== "")) &&
+      (data.date == null || data.date === "")
+    ) {
       const [currentShift] = await executeQuery<RowDataPacket[]>(
         "SELECT date FROM shifts WHERE id = ? AND tenant_id = ?",
         [id, tenantId],
       );
-      if (currentShift && currentShift.length > 0) {
-        const formattedDate = formatDateOnlyForMysql(currentShift[0].date);
+      if (currentShift.length > 0) {
+        const formattedDate = formatDateOnlyForMysql(
+          currentShift[0].date as string | Date,
+        );
         currentDate = formattedDate ?? undefined;
       }
     }
@@ -1435,29 +1449,45 @@ async function update(
         updateFields.push(`${field} = ?`);
         if (field === "date") {
           values.push(formatDateOnlyForMysql(data[field]));
-        } else if (field === "start_time" && data.start_time) {
+        } else if (
+          field === "start_time" &&
+          data.start_time != null &&
+          data.start_time !== ""
+        ) {
           // Convert time to datetime by combining with date
           const dateToUse = data.date ?? currentDate;
-          if (dateToUse) {
+          if (dateToUse !== undefined && dateToUse !== "") {
             values.push(formatDateForMysql(`${dateToUse} ${data.start_time}`));
           } else {
             values.push(data.start_time); // Fallback
           }
-        } else if (field === "end_time" && data.end_time) {
+        } else if (
+          field === "end_time" &&
+          data.end_time != null &&
+          data.end_time !== ""
+        ) {
           // Convert time to datetime by combining with date
           const dateToUse = data.date ?? currentDate;
-          if (dateToUse) {
+          if (dateToUse !== undefined && dateToUse !== "") {
             values.push(formatDateForMysql(`${dateToUse} ${data.end_time}`));
           } else {
             values.push(data.end_time); // Fallback
           }
-        } else if (field === "actual_start" && data.actual_start) {
+        } else if (
+          field === "actual_start" &&
+          data.actual_start != null &&
+          data.actual_start !== ""
+        ) {
           // actual_start/end already includes date and time
           values.push(formatDateForMysql(data.actual_start));
-        } else if (field === "actual_end" && data.actual_end) {
+        } else if (
+          field === "actual_end" &&
+          data.actual_end != null &&
+          data.actual_end !== ""
+        ) {
           values.push(formatDateForMysql(data.actual_end));
         } else {
-          values.push(data[field]);
+          values.push(data[field] as string | number | Date | null);
         }
       }
     }
@@ -1467,14 +1497,14 @@ async function update(
     }
 
     const query = `
-      UPDATE shifts 
+      UPDATE shifts
       SET ${updateFields.join(", ")}, updated_at = NOW()
       WHERE id = ? AND tenant_id = ?
     `;
 
     values.push(id, tenantId);
     await executeQuery(query, values);
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Error in update:", error);
     throw error;
   }
@@ -1503,7 +1533,7 @@ async function deleteShift(id: number, tenantId: number): Promise<void> {
       id,
       tenantId,
     ]);
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Error in deleteShift:", error);
     throw error;
   }
@@ -1534,7 +1564,7 @@ async function getTemplateById(
       tenantId,
     ]);
     return templates.length > 0 ? templates[0] : null;
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Error in getTemplateById:", error);
     throw error;
   }
@@ -1546,7 +1576,7 @@ async function getTemplateById(
 async function createTemplate(data: V2TemplateData): Promise<number> {
   try {
     const query = `
-      INSERT INTO shift_templates 
+      INSERT INTO shift_templates
       (tenant_id, name, start_time, end_time, break_minutes, color, is_night_shift, is_active)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `;
@@ -1563,7 +1593,7 @@ async function createTemplate(data: V2TemplateData): Promise<number> {
     ]);
 
     return result.insertId;
-  } catch (error) {
+  } catch (error: unknown) {
     logger.error("Error creating shift template:", error);
     throw error;
   }
@@ -1615,20 +1645,25 @@ async function updateTemplate(
     }
 
     // Recalculate duration if times changed
-    if (data.start_time && data.end_time) {
+    if (
+      data.start_time != null &&
+      data.start_time !== "" &&
+      data.end_time != null &&
+      data.end_time !== ""
+    ) {
       updateFields.push("duration_hours = ?");
       values.push(calculateDurationHours(data.start_time, data.end_time));
     }
 
     const query = `
-      UPDATE shift_templates 
+      UPDATE shift_templates
       SET ${updateFields.join(", ")}, updated_at = NOW()
       WHERE id = ? AND tenant_id = ?
     `;
 
     values.push(id, tenantId);
     await executeQuery(query, values);
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Error in updateTemplate:", error);
     throw error;
   }
@@ -1643,7 +1678,7 @@ async function deleteTemplate(id: number, tenantId: number): Promise<void> {
       "DELETE FROM shift_templates WHERE id = ? AND tenant_id = ?",
       [id, tenantId],
     );
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Error in deleteTemplate:", error);
     throw error;
   }
@@ -1679,12 +1714,12 @@ async function getSwapRequests(
 
     const queryParams: (string | number)[] = [tenantId];
 
-    if (filters.userId) {
+    if (filters.userId != null && filters.userId !== 0) {
       query += " AND (ssr.requested_by = ? OR ssr.requested_with = ?)";
       queryParams.push(filters.userId, filters.userId);
     }
 
-    if (filters.status) {
+    if (filters.status != null && filters.status !== "") {
       query += " AND ssr.status = ?";
       queryParams.push(filters.status);
     }
@@ -1696,7 +1731,7 @@ async function getSwapRequests(
       queryParams,
     );
     return requests;
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Error in getSwapRequests:", error);
     throw error;
   }
@@ -1713,14 +1748,14 @@ async function createSwapRequest(data: V2SwapRequestData): Promise<number> {
       [data.shift_id, data.requested_by, data.tenant_id],
     );
 
-    if (!assignments || assignments.length === 0) {
+    if (assignments.length === 0) {
       throw new Error("No assignment found for this shift and user");
     }
 
-    const assignmentId = assignments[0].id;
+    const assignmentId = assignments[0].id as number;
 
     const query = `
-      INSERT INTO shift_swap_requests 
+      INSERT INTO shift_swap_requests
       (tenant_id, assignment_id, requested_by, requested_with, reason, status)
       VALUES (?, ?, ?, ?, ?, ?)
     `;
@@ -1731,11 +1766,11 @@ async function createSwapRequest(data: V2SwapRequestData): Promise<number> {
       data.requested_by,
       data.requested_with ?? null,
       data.reason ?? null,
-      data.status ?? "pending",
+      data.status,
     ]);
 
     return result.insertId;
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Error in createSwapRequest:", error);
     throw error;
   }
@@ -1759,7 +1794,7 @@ async function getSwapRequestById(
       tenantId,
     ]);
     return requests.length > 0 ? requests[0] : null;
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Error in getSwapRequestById:", error);
     throw error;
   }
@@ -1776,7 +1811,7 @@ async function updateSwapRequestStatus(
 ): Promise<void> {
   try {
     const query = `
-      UPDATE shift_swap_requests 
+      UPDATE shift_swap_requests
       SET status = ?, approved_by = ?, updated_at = NOW()
       WHERE id = ? AND tenant_id = ?
     `;
@@ -1790,7 +1825,11 @@ async function updateSwapRequestStatus(
         [id],
       );
 
-      if (request.length > 0 && request[0].requested_with) {
+      if (
+        request.length > 0 &&
+        request[0].requested_with != null &&
+        request[0].requested_with !== 0
+      ) {
         // Update the shift assignment
         await executeQuery("UPDATE shifts SET user_id = ? WHERE id = ?", [
           request[0].requested_with,
@@ -1798,7 +1837,7 @@ async function updateSwapRequestStatus(
         ]);
       }
     }
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Error in updateSwapRequestStatus:", error);
     throw error;
   }
@@ -1815,28 +1854,28 @@ async function getOvertimeByUser(
 ): Promise<Record<string, unknown>> {
   try {
     const query = `
-      SELECT 
+      SELECT
         COUNT(*) as totalShifts,
         SUM(
-          CASE 
+          CASE
             WHEN actual_end IS NOT NULL AND actual_start IS NOT NULL THEN
-              TIMESTAMPDIFF(MINUTE, 
-                CONCAT(date, ' ', actual_start), 
+              TIMESTAMPDIFF(MINUTE,
+                CONCAT(date, ' ', actual_start),
                 CONCAT(date, ' ', actual_end)
               ) / 60.0
             ELSE
-              TIMESTAMPDIFF(MINUTE, 
-                CONCAT(date, ' ', start_time), 
+              TIMESTAMPDIFF(MINUTE,
+                CONCAT(date, ' ', start_time),
                 CONCAT(date, ' ', end_time)
               ) / 60.0
           END
         ) as totalHours,
         SUM(
-          CASE 
+          CASE
             WHEN actual_end IS NOT NULL AND actual_start IS NOT NULL THEN
               GREATEST(0,
-                TIMESTAMPDIFF(MINUTE, 
-                  CONCAT(date, ' ', end_time), 
+                TIMESTAMPDIFF(MINUTE,
+                  CONCAT(date, ' ', end_time),
                   CONCAT(date, ' ', actual_end)
                 ) / 60.0
               )
@@ -1845,7 +1884,7 @@ async function getOvertimeByUser(
         ) as overtimeHours,
         SUM(break_minutes) / 60.0 as breakHours
       FROM shifts
-      WHERE tenant_id = ? 
+      WHERE tenant_id = ?
         AND user_id = ?
         AND date BETWEEN ? AND ?
         AND status IN ('completed', 'in_progress')
@@ -1860,7 +1899,7 @@ async function getOvertimeByUser(
 
     // Get shift details
     const detailQuery = `
-      SELECT 
+      SELECT
         date,
         start_time,
         end_time,
@@ -1868,30 +1907,30 @@ async function getOvertimeByUser(
         actual_end,
         break_minutes,
         type,
-        CASE 
+        CASE
           WHEN actual_end IS NOT NULL AND actual_start IS NOT NULL THEN
-            TIMESTAMPDIFF(MINUTE, 
-              CONCAT(date, ' ', actual_start), 
+            TIMESTAMPDIFF(MINUTE,
+              CONCAT(date, ' ', actual_start),
               CONCAT(date, ' ', actual_end)
             ) / 60.0
           ELSE
-            TIMESTAMPDIFF(MINUTE, 
-              CONCAT(date, ' ', start_time), 
+            TIMESTAMPDIFF(MINUTE,
+              CONCAT(date, ' ', start_time),
               CONCAT(date, ' ', end_time)
             ) / 60.0
         END as workedHours,
-        CASE 
+        CASE
           WHEN actual_end IS NOT NULL AND actual_start IS NOT NULL THEN
             GREATEST(0,
-              TIMESTAMPDIFF(MINUTE, 
-                CONCAT(date, ' ', end_time), 
+              TIMESTAMPDIFF(MINUTE,
+                CONCAT(date, ' ', end_time),
                 CONCAT(date, ' ', actual_end)
               ) / 60.0
             )
           ELSE 0
         END as overtimeHours
       FROM shifts
-      WHERE tenant_id = ? 
+      WHERE tenant_id = ?
         AND user_id = ?
         AND date BETWEEN ? AND ?
         AND status IN ('completed', 'in_progress')
@@ -1907,17 +1946,17 @@ async function getOvertimeByUser(
 
     return {
       summary: {
-        totalShifts: result[0].totalShifts ?? 0,
-        totalHours: parseFloat(result[0].totalHours) || 0,
-        overtimeHours: parseFloat(result[0].overtimeHours) || 0,
-        breakHours: parseFloat(result[0].breakHours) || 0,
+        totalShifts: (result[0].totalShifts as number) || 0,
+        totalHours: parseFloat(String(result[0].totalHours)) || 0,
+        overtimeHours: parseFloat(String(result[0].overtimeHours)) || 0,
+        breakHours: parseFloat(String(result[0].breakHours)) || 0,
         netHours:
-          (parseFloat(result[0].totalHours) || 0) -
-          (parseFloat(result[0].breakHours) || 0),
+          (parseFloat(String(result[0].totalHours)) || 0) -
+          (parseFloat(String(result[0].breakHours)) || 0),
       },
       shifts,
     };
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Error in getOvertimeByUser:", error);
     throw error;
   }

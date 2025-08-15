@@ -135,7 +135,24 @@ router.post(
   authLimiter, // Rate limiting for registration
   validate(signupValidation),
   async (req: Request, res: Response) => {
-    await signupController.signup(req, res);
+    console.info("[SIGNUP ROUTE] Request received");
+    console.info("[SIGNUP ROUTE] Body:", req.body);
+    console.info("[SIGNUP ROUTE] About to call controller");
+    try {
+      console.info("[SIGNUP ROUTE] Inside try block");
+      await signupController.signup(req, res);
+      console.info("[SIGNUP ROUTE] Controller call completed");
+    } catch (error: unknown) {
+      console.error("[SIGNUP ROUTE] Error caught in route handler:", error);
+      res.status(500).json({
+        success: false,
+        error: {
+          code: "ROUTE_ERROR",
+          message: error instanceof Error ? error.message : "Unknown error",
+          stack: error instanceof Error ? error.stack : undefined,
+        },
+      });
+    }
   },
 );
 

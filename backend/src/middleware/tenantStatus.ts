@@ -6,7 +6,7 @@
 import { Request, Response, NextFunction } from "express";
 import { RowDataPacket } from "mysql2";
 
-import { AuthenticatedRequest } from "../types/request.types";
+import type { AuthenticatedRequest } from "../types/request.types";
 import { query } from "../utils/db";
 import { logger } from "../utils/logger";
 
@@ -29,7 +29,7 @@ export async function checkTenantStatus(
     const authReq = req as AuthenticatedRequest;
 
     // Skip if no user or no tenant_id
-    if (!authReq.user?.tenant_id) {
+    if (!authReq.user.tenant_id) {
       next();
       return;
     }
@@ -61,9 +61,7 @@ export async function checkTenantStatus(
       [tenantId],
     );
 
-    const tenant = tenantRows[0];
-
-    if (!tenant) {
+    if (tenantRows.length === 0) {
       logger.error(`Tenant ${tenantId} not found in status check`);
       res.status(404).json({
         error: "Tenant not found",
@@ -71,6 +69,8 @@ export async function checkTenantStatus(
       });
       return;
     }
+
+    const tenant = tenantRows[0];
 
     // Block access based on deletion status
     switch (tenant.deletion_status) {
@@ -118,11 +118,11 @@ export async function checkTenantStatus(
 
       default:
         logger.error(
-          `Unknown tenant deletion status: ${tenant.deletion_status}`,
+          `Unknown tenant deletion status: ${String(tenant.deletion_status)}`,
         );
         next();
     }
-  } catch (error) {
+  } catch (error: unknown) {
     logger.error("Error in tenant status middleware:", error);
     // Don't block access on middleware errors
     next();
@@ -138,13 +138,13 @@ export function requireActiveTenant(
   next: NextFunction,
 ): void {
   void checkTenantStatus(req, res, (err?: unknown) => {
-    if (err) {
+    if (err !== null && err !== undefined && err !== "") {
       next(err);
       return;
     }
 
     const authReq = req as AuthenticatedRequest;
-    if (!authReq.user?.tenant_id) {
+    if (!authReq.user.tenant_id) {
       next();
       return;
     }
@@ -155,12 +155,11 @@ export function requireActiveTenant(
       [authReq.user.tenant_id],
     )
       .then(([rows]) => {
-        const tenant = rows[0];
-        if (tenant && tenant.deletion_status !== "active") {
+        if (rows.length > 0 && rows[0].deletion_status !== "active") {
           res.status(403).json({
             error: "This action requires an active tenant",
             code: "TENANT_NOT_ACTIVE",
-            status: tenant.deletion_status,
+            status: rows[0].deletion_status,
           });
         } else {
           next();
@@ -185,11 +184,11 @@ export async function getTenantDeletionInfo(tenantId: number): Promise<{
       [tenantId],
     );
 
-    const tenant = tenantRows[0];
-
-    if (!tenant) {
+    if (tenantRows.length === 0) {
       return null;
     }
+
+    const tenant = tenantRows[0];
 
     const result = {
       isScheduledForDeletion: tenant.deletion_status !== "active",
@@ -215,7 +214,7 @@ export async function getTenantDeletionInfo(tenantId: number): Promise<{
     }
 
     return result;
-  } catch (error) {
+  } catch (error: unknown) {
     logger.error("Error getting tenant deletion info:", error);
     return null;
   }

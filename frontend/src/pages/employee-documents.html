@@ -71,7 +71,6 @@
       .header {
         background: rgba(255, 255, 255, 0.02);
         backdrop-filter: blur(20px) saturate(180%);
-        -webkit-backdrop-filter: blur(20px) saturate(180%);
         border: 1px solid rgba(255, 255, 255, 0.1);
         box-shadow: 0 4px 32px rgba(0, 0, 0, 0.1);
         /* WICHTIG: Kein border-bottom, nur box-shadow! */
@@ -81,7 +80,6 @@
       .sidebar {
         background: rgba(255, 255, 255, 0.05);
         backdrop-filter: blur(20px) saturate(180%);
-        -webkit-backdrop-filter: blur(20px) saturate(180%);
         border-right: 1px solid rgba(255, 255, 255, 0.1);
       }
 
@@ -90,7 +88,6 @@
       .compact-card {
         background: rgba(255, 255, 255, 0.02);
         backdrop-filter: blur(20px) saturate(180%);
-        -webkit-backdrop-filter: blur(20px) saturate(180%);
         border: 1px solid hsla(0, 0%, 100%, 0.1);
         box-shadow: var(--shadow-sm);
         border-radius: var(--radius-md);
@@ -115,12 +112,12 @@
         right: 0;
         height: 3px;
         background: linear-gradient(90deg, var(--primary-color), var(--primary-light));
-        opacity: 0;
+        opacity: 0%;
         transition: opacity 0.3s ease;
       }
 
       .compact-card:hover::before {
-        opacity: 1;
+        opacity: 100%;
       }
 
       .compact-card:hover {
@@ -209,7 +206,7 @@
       /* Second-Level Button - für sekundäre Aktionen */
       .btn-primary {
         background: linear-gradient(135deg, var(--primary-color), var(--primary-hover));
-        color: white;
+        color: #fff;
         box-shadow:
           0 2px 8px rgba(33, 150, 243, 0.3),
           inset 0 1px 0 rgba(255, 255, 255, 0.2);
@@ -267,7 +264,6 @@
       /* Table Styles */
       .table-responsive {
         overflow-x: auto;
-        border-radius: var(--radius-sm);
       }
 
       .table {
@@ -337,7 +333,7 @@
         white-space: nowrap;
         vertical-align: baseline;
         border-radius: 12px;
-        color: white;
+        color: #fff;
         backdrop-filter: blur(10px);
       }
 
@@ -418,11 +414,11 @@
       /* Animation Keyframes */
       @keyframes fadeInUp {
         from {
-          opacity: 0;
+          opacity: 0%;
           transform: translateY(30px);
         }
         to {
-          opacity: 1;
+          opacity: 100%;
           transform: translateY(0);
         }
       }
@@ -472,6 +468,63 @@
         .page-title {
           font-size: 1.5rem;
         }
+      }
+
+      /* Notification Styles */
+      .notification {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: rgba(255, 255, 255, 0.95);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        border-radius: 12px;
+        padding: 16px 20px;
+        min-width: 300px;
+        max-width: 500px;
+        backdrop-filter: blur(10px);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+        transform: translateX(400px);
+        transition: all 0.3s ease-out;
+        z-index: 9999;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-size: 14px;
+        font-weight: 500;
+      }
+
+      .notification.show {
+        transform: translateX(0);
+      }
+
+      .notification.notification-error {
+        border-left: 4px solid #ff4444;
+        color: #d32f2f;
+      }
+
+      .notification.notification-error i {
+        color: #ff4444;
+        font-size: 16px;
+      }
+
+      .notification.notification-success {
+        border-left: 4px solid #4caf50;
+        color: #2e7d32;
+      }
+
+      .notification.notification-success i {
+        color: #4caf50;
+        font-size: 16px;
+      }
+
+      .notification.notification-info {
+        border-left: 4px solid #2196f3;
+        color: #1976d2;
+      }
+
+      .notification.notification-info i {
+        color: #2196f3;
+        font-size: 16px;
       }
     </style>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
@@ -561,7 +614,9 @@
         // Funktionen
         async function loadDocuments() {
           try {
-            const response = await fetch('/api/employee/documents', {
+            const useV2Documents = window.FEATURE_FLAGS?.USE_API_V2_DOCUMENTS;
+            const endpoint = useV2Documents ? '/api/v2/documents/employee' : '/api/employee/documents';
+            const response = await fetch(endpoint, {
               headers: {
                 Authorization: `Bearer ${localStorage.getItem('token')}`,
               },
@@ -572,11 +627,11 @@
               displayDocuments(documents);
             } else {
               const error = await response.json();
-              alert(`Fehler: ${error.message}`);
+              showError(`Fehler: ${error.message}`);
             }
           } catch (error) {
             console.error('Fehler beim Laden der Dokumente:', error);
-            alert('Dokumente konnten nicht geladen werden.');
+            showError('Dokumente konnten nicht geladen werden.');
           }
         }
 
@@ -586,7 +641,11 @@
 
           if (query) {
             try {
-              const response = await fetch(`/api/employee/search-documents?query=${encodeURIComponent(query)}`, {
+              const useV2Documents = window.FEATURE_FLAGS?.USE_API_V2_DOCUMENTS;
+              const endpoint = useV2Documents
+                ? `/api/v2/documents/employee/search?query=${encodeURIComponent(query)}`
+                : `/api/employee/search-documents?query=${encodeURIComponent(query)}`;
+              const response = await fetch(endpoint, {
                 headers: {
                   Authorization: `Bearer ${localStorage.getItem('token')}`,
                 },
@@ -597,11 +656,11 @@
                 displayDocuments(documents);
               } else {
                 const error = await response.json();
-                alert(`Fehler: ${error.message}`);
+                showError(`Fehler: ${error.message}`);
               }
             } catch (error) {
               console.error('Fehler bei der Dokumentensuche:', error);
-              alert('Suche konnte nicht durchgeführt werden.');
+              showError('Suche konnte nicht durchgeführt werden.');
             }
           }
         }
@@ -659,7 +718,7 @@
 
                   const docId = this.getAttribute('data-document-id');
                   if (docId) {
-                    console.log(`Download-Button geklickt für Dokument ID: ${docId}`);
+                    console.info(`Download-Button geklickt für Dokument ID: ${docId}`);
                     openDocumentInNewTab(docId);
                   }
                 });
@@ -670,12 +729,12 @@
 
         // Dokument per Blob-API herunterladen
         function openDocumentInNewTab(documentId) {
-          console.log(`Starte Download für Dokument mit ID ${documentId}`);
+          console.info(`Starte Download für Dokument mit ID ${documentId}`);
 
           // Den Token aus dem localStorage holen
           const token = localStorage.getItem('token');
           if (!token) {
-            alert('Sie müssen angemeldet sein, um Dokumente herunterzuladen.');
+            showError('Sie müssen angemeldet sein, um Dokumente herunterzuladen.');
             return;
           }
 
@@ -718,7 +777,7 @@
 
               // Fallback wenn popup blockiert
               if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
-                alert('Pop-up wurde blockiert. Bitte erlauben Sie Pop-ups für diese Seite.');
+                showInfo('Pop-up wurde blockiert. Bitte erlauben Sie Pop-ups für diese Seite.');
 
                 // Alternativ einen unsichtbaren Link erstellen und klicken
                 const a = document.createElement('a');
@@ -736,7 +795,7 @@
             })
             .catch((error) => {
               console.error('Fehler beim Herunterladen des Dokuments:', error);
-              alert(error.message || 'Fehler beim Herunterladen des Dokuments');
+              showError(error.message || 'Fehler beim Herunterladen des Dokuments');
 
               // Button wieder aktivieren, wenn ein Fehler auftritt
               if (downloadBtn) {
@@ -750,13 +809,77 @@
         // Für Kompatibilität mit bestehendem Code behalten wir die globale Funktion bei
         window.downloadDocument = function (documentId) {
           try {
-            console.log(`Globale Funktion: Starte Download für Dokument ID: ${documentId}`);
+            console.info(`Globale Funktion: Starte Download für Dokument ID: ${documentId}`);
             openDocumentInNewTab(documentId); // Verwende unsere verbesserte Funktion
           } catch (error) {
             console.error('Fehler beim Herunterladen des Dokuments:', error);
-            alert('Fehler beim Herunterladen des Dokuments');
+            showError('Fehler beim Herunterladen des Dokuments');
           }
         };
+
+        // Notification functions
+        function showError(message) {
+          const notification = document.createElement('div');
+          notification.className = 'notification notification-error';
+          notification.innerHTML = `
+            <i class="fas fa-exclamation-circle"></i>
+            <span>${message}</span>
+          `;
+          document.body.appendChild(notification);
+
+          setTimeout(() => {
+            notification.classList.add('show');
+          }, 100);
+
+          setTimeout(() => {
+            notification.classList.remove('show');
+            setTimeout(() => {
+              document.body.removeChild(notification);
+            }, 300);
+          }, 4000);
+        }
+
+        function showSuccess(message) {
+          const notification = document.createElement('div');
+          notification.className = 'notification notification-success';
+          notification.innerHTML = `
+            <i class="fas fa-check-circle"></i>
+            <span>${message}</span>
+          `;
+          document.body.appendChild(notification);
+
+          setTimeout(() => {
+            notification.classList.add('show');
+          }, 100);
+
+          setTimeout(() => {
+            notification.classList.remove('show');
+            setTimeout(() => {
+              document.body.removeChild(notification);
+            }, 300);
+          }, 3000);
+        }
+
+        function showInfo(message) {
+          const notification = document.createElement('div');
+          notification.className = 'notification notification-info';
+          notification.innerHTML = `
+            <i class="fas fa-info-circle"></i>
+            <span>${message}</span>
+          `;
+          document.body.appendChild(notification);
+
+          setTimeout(() => {
+            notification.classList.add('show');
+          }, 100);
+
+          setTimeout(() => {
+            notification.classList.remove('show');
+            setTimeout(() => {
+              document.body.removeChild(notification);
+            }, 300);
+          }, 3500);
+        }
 
         function logout() {
           if (confirm('Möchten Sie sich wirklich abmelden?')) {

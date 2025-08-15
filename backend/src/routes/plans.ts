@@ -4,7 +4,7 @@ import { RowDataPacket } from "mysql2";
 
 import { security } from "../middleware/security";
 import { createValidation } from "../middleware/validation";
-import { Plan } from "../models/plan";
+import Plan from "../models/plan";
 import { successResponse, errorResponse } from "../types/response.types";
 import { logger } from "../utils/logger";
 import { typed } from "../utils/routeHandlers";
@@ -65,7 +65,7 @@ router.get(
 // Simple available route
 router.get(
   "/simple",
-  typed.public(async (_req, res) => {
+  typed.public((_req, res) => {
     try {
       res.json(
         successResponse([
@@ -122,7 +122,7 @@ router.get(
           },
         ]),
       );
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("Simple route error:", error);
       res.status(500).json(errorResponse("Fehler beim Abrufen der Pläne", 500));
     }
@@ -134,22 +134,22 @@ router.get(
   "/available",
   typed.public(async (_req, res) => {
     try {
-      console.log("[DEBUG] Plans route - starting");
+      console.info("[DEBUG] Plans route - starting");
 
       // Direct database query to bypass the issue
       const { execute } = await import("../database");
       const query = `
-      SELECT * FROM plans 
-      WHERE is_active = true 
+      SELECT * FROM plans
+      WHERE is_active = true
       ORDER BY sort_order ASC
     `;
       const [plans] = await execute<RowDataPacket[]>(query);
-      console.log("[DEBUG] Plans fetched directly:", plans);
+      console.info("[DEBUG] Plans fetched directly:", plans);
 
       // Add feature information to each plan
       const plansWithFeatures = await Promise.all(
         plans.map(async (plan) => {
-          const features = await Plan.getPlanFeatures(plan.id);
+          const features = await Plan.getPlanFeatures(plan.id as number);
           return {
             ...plan,
             features: features.filter((f) => f.is_included),
@@ -158,7 +158,7 @@ router.get(
       );
 
       res.json(successResponse(plansWithFeatures));
-    } catch (error) {
+    } catch (error: unknown) {
       logger.error(`Error fetching plans: ${(error as Error).message}`);
       res.status(500).json(errorResponse("Fehler beim Abrufen der Pläne", 500));
     }
@@ -171,7 +171,7 @@ router.get(
   ...security.user(),
   typed.auth(async (req, res) => {
     try {
-      const tenantId = req.user?.tenant_id;
+      const tenantId = req.user.tenant_id;
 
       const currentPlan = await Plan.getTenantPlan(tenantId);
       if (!currentPlan) {
@@ -196,7 +196,7 @@ router.get(
           costs,
         }),
       );
-    } catch (error) {
+    } catch (error: unknown) {
       logger.error(`Error fetching current plan: ${(error as Error).message}`);
       res
         .status(500)
@@ -239,7 +239,7 @@ router.get(
           costs,
         }),
       );
-    } catch (error) {
+    } catch (error: unknown) {
       logger.error(`Error fetching tenant plan: ${(error as Error).message}`);
       res
         .status(500)
@@ -259,7 +259,7 @@ router.post(
       // Validation is now handled by middleware
 
       // For admin, can only change own tenant's plan
-      const userTenantId = req.user?.tenant_id;
+      const userTenantId = req.user.tenant_id;
       if (req.user.role === "admin" && tenantId !== userTenantId) {
         res
           .status(403)
@@ -275,7 +275,10 @@ router.post(
       await Plan.changeTenantPlan({
         tenantId,
         newPlanCode,
-        effectiveDate: effectiveDate ? new Date(effectiveDate) : undefined,
+        effectiveDate:
+          effectiveDate != null && effectiveDate !== ""
+            ? new Date(effectiveDate)
+            : undefined,
       });
 
       // Get updated plan info
@@ -291,7 +294,7 @@ router.post(
           "Plan erfolgreich geändert",
         ),
       );
-    } catch (error) {
+    } catch (error: unknown) {
       logger.error(`Error changing plan: ${(error as Error).message}`);
       res.status(500).json(errorResponse("Fehler beim Ändern des Plans", 500));
     }
@@ -304,11 +307,11 @@ router.get(
   ...security.user(),
   typed.auth(async (req, res) => {
     try {
-      const tenantId = req.user?.tenant_id;
+      const tenantId = req.user.tenant_id;
       const addons = await Plan.getTenantAddons(tenantId);
 
       res.json(successResponse(addons));
-    } catch (error) {
+    } catch (error: unknown) {
       logger.error(`Error fetching addons: ${(error as Error).message}`);
       res
         .status(500)
@@ -328,7 +331,7 @@ router.post(
       // Validation is now handled by middleware
 
       // For admin, can only update own tenant's addons
-      const userTenantId = req.user?.tenant_id;
+      const userTenantId = req.user.tenant_id;
       if (req.user.role === "admin" && tenantId !== userTenantId) {
         res
           .status(403)
@@ -361,7 +364,7 @@ router.post(
           "Add-ons erfolgreich aktualisiert",
         ),
       );
-    } catch (error) {
+    } catch (error: unknown) {
       logger.error(`Error updating addons: ${(error as Error).message}`);
       res
         .status(500)
@@ -383,7 +386,7 @@ router.get(
       const tenantId = parseInt(req.params.tenantId, 10);
 
       // Only root can view other tenants' costs, others can only see their own
-      const userTenantId = req.user?.tenant_id;
+      const userTenantId = req.user.tenant_id;
       if (req.user.role !== "root" && tenantId !== userTenantId) {
         res.status(403).json(errorResponse("Keine Berechtigung", 403));
         return;
@@ -391,7 +394,7 @@ router.get(
 
       const costs = await Plan.calculateTenantCost(tenantId);
       res.json(successResponse(costs));
-    } catch (error) {
+    } catch (error: unknown) {
       logger.error(`Error calculating costs: ${(error as Error).message}`);
       res
         .status(500)

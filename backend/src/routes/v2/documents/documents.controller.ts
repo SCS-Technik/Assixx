@@ -10,11 +10,22 @@
 import { Response } from "express";
 import multer from "multer";
 
-import { AuthenticatedRequest } from "../../../types/request.types";
+import RootLog from "../../../models/rootLog";
+import type { AuthenticatedRequest } from "../../../types/request.types";
 import { successResponse, errorResponse } from "../../../utils/apiResponse";
 import { logger } from "../../../utils/logger";
 
 import { documentsService, ServiceError } from "./documents.service";
+
+interface Document {
+  id: number;
+  filename: string;
+  category?: string;
+  fileSize?: number;
+  mimeType?: string;
+  recipientType?: string;
+  [key: string]: unknown;
+}
 
 // Configure multer for file uploads
 const storage = multer.memoryStorage();
@@ -152,8 +163,8 @@ export async function listDocuments(req: AuthenticatedRequest, res: Response) {
     );
 
     res.json(successResponse(result));
-  } catch (error) {
-    logger.error(`List documents error: ${(error as Error).message}`);
+  } catch (error: unknown) {
+    logger.error(`List documents error: ${String((error as Error).message)}`);
     if (error instanceof ServiceError) {
       res
         .status(error.statusCode)
@@ -211,8 +222,8 @@ export async function getDocumentById(
     );
 
     res.json(successResponse(document));
-  } catch (error) {
-    logger.error(`Get document error: ${(error as Error).message}`);
+  } catch (error: unknown) {
+    logger.error(`Get document error: ${String((error as Error).message)}`);
     if (error instanceof ServiceError) {
       res
         .status(error.statusCode)
@@ -328,9 +339,31 @@ export async function createDocument(req: AuthenticatedRequest, res: Response) {
       req.user.tenant_id,
     );
 
+    // Log document upload
+    await RootLog.create({
+      tenant_id: req.user.tenant_id,
+      user_id: req.user.id,
+      action: "upload",
+      entity_type: "document",
+      entity_id: (document as unknown as Document).id,
+      details: `Hochgeladen: ${String((document as unknown as Document).filename ?? documentData.filename)}`,
+      new_values: {
+        filename:
+          (document as unknown as Document).filename ?? documentData.filename,
+        category: documentData.category,
+        file_size: documentData.fileSize,
+        mime_type: documentData.mimeType,
+        recipient_type: documentData.recipientType,
+        uploaded_by: req.user.email,
+      },
+      ip_address: req.ip ?? req.socket.remoteAddress,
+      user_agent: req.get("user-agent"),
+      was_role_switched: false,
+    });
+
     res.status(201).json(successResponse(document));
-  } catch (error) {
-    logger.error(`Create document error: ${(error as Error).message}`);
+  } catch (error: unknown) {
+    logger.error(`Create document error: ${String((error as Error).message)}`);
     if (error instanceof ServiceError) {
       res
         .status(error.statusCode)
@@ -431,8 +464,8 @@ export async function updateDocument(req: AuthenticatedRequest, res: Response) {
     );
 
     res.json(successResponse(document));
-  } catch (error) {
-    logger.error(`Update document error: ${(error as Error).message}`);
+  } catch (error: unknown) {
+    logger.error(`Update document error: ${String((error as Error).message)}`);
     if (error instanceof ServiceError) {
       res
         .status(error.statusCode)
@@ -488,15 +521,47 @@ export async function deleteDocument(req: AuthenticatedRequest, res: Response) {
   try {
     const documentId = parseInt(req.params.id);
 
+    // Get document details before deletion for logging
+    const document = await documentsService.getDocumentById(
+      documentId,
+      req.user.id,
+      req.user.tenant_id,
+    );
+
     const result = await documentsService.deleteDocument(
       documentId,
       req.user.id,
       req.user.tenant_id,
     );
 
+    // Log document deletion
+    await RootLog.create({
+      tenant_id: req.user.tenant_id,
+      user_id: req.user.id,
+      action: "delete",
+      entity_type: "document",
+      entity_id: documentId,
+      details: `Gelöscht: ${String((document as unknown as Document | null)?.filename ?? "unknown")}`,
+      old_values: {
+        filename:
+          (document as unknown as Document | null)?.filename ?? "unknown",
+        category:
+          (document as unknown as Document | null)?.category ?? "unknown",
+        file_size: (document as unknown as Document | null)?.fileSize ?? 0,
+        mime_type:
+          (document as unknown as Document | null)?.mimeType ?? "unknown",
+        recipient_type:
+          (document as unknown as Document | null)?.recipientType ?? "unknown",
+        deleted_by: req.user.email,
+      },
+      ip_address: req.ip ?? req.socket.remoteAddress,
+      user_agent: req.get("user-agent"),
+      was_role_switched: false,
+    });
+
     res.json(successResponse(result));
-  } catch (error) {
-    logger.error(`Delete document error: ${(error as Error).message}`);
+  } catch (error: unknown) {
+    logger.error(`Delete document error: ${String((error as Error).message)}`);
     if (error instanceof ServiceError) {
       res
         .status(error.statusCode)
@@ -564,8 +629,8 @@ export async function archiveDocument(
     );
 
     res.json(successResponse(result));
-  } catch (error) {
-    logger.error(`Archive document error: ${(error as Error).message}`);
+  } catch (error: unknown) {
+    logger.error(`Archive document error: ${String((error as Error).message)}`);
     if (error instanceof ServiceError) {
       res
         .status(error.statusCode)
@@ -632,8 +697,10 @@ export async function unarchiveDocument(
     );
 
     res.json(successResponse(result));
-  } catch (error) {
-    logger.error(`Unarchive document error: ${(error as Error).message}`);
+  } catch (error: unknown) {
+    logger.error(
+      `Unarchive document error: ${String((error as Error).message)}`,
+    );
     if (error instanceof ServiceError) {
       res
         .status(error.statusCode)
@@ -701,8 +768,10 @@ export async function downloadDocument(
 
     // Send file content
     res.send(documentContent.content);
-  } catch (error) {
-    logger.error(`Download document error: ${(error as Error).message}`);
+  } catch (error: unknown) {
+    logger.error(
+      `Download document error: ${String((error as Error).message)}`,
+    );
     if (error instanceof ServiceError) {
       res
         .status(error.statusCode)
@@ -770,8 +839,8 @@ export async function previewDocument(
 
     // Send file content
     res.send(documentContent.content);
-  } catch (error) {
-    logger.error(`Preview document error: ${(error as Error).message}`);
+  } catch (error: unknown) {
+    logger.error(`Preview document error: ${String((error as Error).message)}`);
     if (error instanceof ServiceError) {
       res
         .status(error.statusCode)
@@ -835,8 +904,10 @@ export async function getDocumentStats(
     );
 
     res.json(successResponse(stats));
-  } catch (error) {
-    logger.error(`Get document stats error: ${(error as Error).message}`);
+  } catch (error: unknown) {
+    logger.error(
+      `Get document stats error: ${String((error as Error).message)}`,
+    );
     if (error instanceof ServiceError) {
       res
         .status(error.statusCode)

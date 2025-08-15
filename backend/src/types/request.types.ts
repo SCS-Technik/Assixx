@@ -21,6 +21,7 @@ export interface AuthUser {
   first_name?: string;
   last_name?: string;
   department_id?: number | null;
+  team_id?: number | null;
   position?: string | null;
   activeRole?: string; // For role switching functionality
   isRoleSwitched?: boolean; // Flag to indicate if role is switched
@@ -28,13 +29,13 @@ export interface AuthUser {
 
 // Base authenticated request
 export interface AuthenticatedRequest
-  extends Request<ParamsDictionary, unknown, unknown, ParsedQs> {
+  extends Request<ParamsDictionary, unknown, unknown> {
   user: AuthUser;
   tenant?: TenantInfo | null;
   tenant_id?: number | null;
-  tenantId?: number | null; // v2 API camelCase version
+  tenantId?: number; // v2 API camelCase version - only undefined or number, never null
   subdomain?: string;
-  userId?: number; // Convenience property
+  userId?: number; // Convenience property - only undefined or number, never null
 }
 
 // Use Express.Multer.File from express-extensions.d.ts
@@ -105,14 +106,14 @@ export interface DocumentRequest extends AuthenticatedRequest {
 
 // Public Request (no authentication required)
 export interface PublicRequest
-  extends Request<ParamsDictionary, unknown, unknown, ParsedQs> {
+  extends Request<ParamsDictionary, unknown, unknown> {
   subdomain?: string;
   tenantId?: number | null;
 }
 
 // Optional Auth Request (authentication optional)
 export interface OptionalAuthRequest
-  extends Request<ParamsDictionary, unknown, unknown, ParsedQs> {
+  extends Request<ParamsDictionary, unknown, unknown> {
   user?: AuthUser;
   tenant?: TenantInfo | null;
   tenantId?: number | null;
@@ -121,7 +122,7 @@ export interface OptionalAuthRequest
 
 // API Key Request
 export interface ApiKeyRequest
-  extends Request<ParamsDictionary, unknown, unknown, ParsedQs> {
+  extends Request<ParamsDictionary, unknown, unknown> {
   apiKey?: string;
   apiKeyPermissions?: string[];
   tenantId?: number;

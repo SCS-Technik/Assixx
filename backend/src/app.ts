@@ -70,6 +70,41 @@ app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 // Input sanitization middleware - apply globally to all routes
 app.use(sanitizeInputs);
 
+// Define paths early for feature-flags.js handler
+const distPath = path.join(currentDirPath, "../../frontend/dist");
+
+// Serve feature-flags.js with correct MIME type
+// codeql[js/missing-rate-limiting] - False positive: Rate limiting is applied via rateLimiter.public middleware
+app.get(
+  "/feature-flags.js",
+  rateLimiter.public,
+  (_req: Request, res: Response): void => {
+    // Try multiple locations for feature-flags.js
+    const possiblePaths = [
+      path.join(distPath, "feature-flags.js"),
+      path.join(currentDirPath, "../../frontend/public/feature-flags.js"),
+      path.join(currentDirPath, "../../dist/feature-flags.js"),
+    ];
+
+    let featureFlagsPath = "";
+    for (const p of possiblePaths) {
+      if (fs.existsSync(p)) {
+        featureFlagsPath = p;
+        break;
+      }
+    }
+
+    if (!featureFlagsPath) {
+      res.status(404).send("feature-flags.js not found");
+      return;
+    }
+
+    res.setHeader("Content-Type", "application/javascript; charset=utf-8");
+    res.setHeader("X-Content-Type-Options", "nosniff");
+    res.sendFile(featureFlagsPath);
+  },
+);
+
 // Clean URLs redirect middleware - MUST BE BEFORE static files
 app.use((req: Request, res: Response, next: NextFunction): void => {
   if (req.path.endsWith(".html") && req.path.startsWith("/pages/")) {
@@ -92,14 +127,15 @@ app.use(
   (req: Request, res: Response, next: NextFunction) => {
     // lgtm[js/missing-rate-limiting]
     if (req.path.endsWith(".html")) {
-      return protectPage(req, res, next);
+      protectPage(req, res, next);
+      return;
     }
     next();
   },
 );
 
 // Static files - serve from frontend dist directory (compiled JavaScript)
-const distPath = path.join(currentDirPath, "../../frontend/dist");
+// distPath already defined above
 const srcPath = path.join(currentDirPath, "../../frontend/src");
 
 // Serve built files first (HTML, JS, CSS)
@@ -185,7 +221,7 @@ app.use("/js", rateLimiter.public, (req: Request, res: Response): void => {
   };
 
   const tsPath = tsMapping[jsFileName];
-  if (tsPath) {
+  if (tsPath !== null && tsPath !== undefined && tsPath !== "") {
     // Redirect to the TypeScript file
     res.redirect(tsPath);
     return;
@@ -245,7 +281,7 @@ app.use(
     }
 
     if (fs.existsSync(jsPath)) {
-      console.log(`[DEBUG] Serving compiled JS instead of TS: ${jsPath}`);
+      console.info(`[DEBUG] Serving compiled JS instead of TS: ${jsPath}`);
       res.type("application/javascript").sendFile(jsPath);
       return;
     }
@@ -281,7 +317,7 @@ app.use(
     }
 
     if (fs.existsSync(actualTsPath)) {
-      console.log(`[DEBUG] Serving TypeScript file: ${actualTsPath}`);
+      console.info(`[DEBUG] Serving TypeScript file: ${actualTsPath}`);
 
       // Read the TypeScript file
       const tsContent = fs.readFileSync(actualTsPath, "utf8");
@@ -427,7 +463,7 @@ app.use("/api/upload", uploadLimiter);
 // Debug middleware to log all requests
 app.use((req: Request, _res: Response, next: NextFunction): void => {
   // Use separate arguments to avoid format string issues
-  console.log(
+  console.info(
     "[DEBUG]",
     req.method,
     req.originalUrl,
@@ -471,14 +507,14 @@ app.get("/api/status", (_req: Request, res: Response): void => {
 
 // Test POST endpoint
 app.post("/api/test", (req: Request, res: Response): void => {
-  console.log("[DEBUG] /api/test POST received");
+  console.info("[DEBUG] /api/test POST received");
   res.json({ message: "POST test successful", body: req.body });
 });
 
 // Import auth controller directly for legacy endpoint
 // Legacy login endpoints (for backward compatibility) - MUST BE BEFORE OTHER ROUTES
 app.get("/login", (_req: Request, res: Response): void => {
-  console.log("[DEBUG] GET /login - serving login page");
+  console.info("[DEBUG] GET /login - serving login page");
   // Fix path for Docker environment
   const projectRoot = process.cwd(); // In Docker this is /app
   const loginPath = path.join(
@@ -494,14 +530,14 @@ app.get("/login", (_req: Request, res: Response): void => {
 app.post(
   "/login",
   async (req: Request, res: Response, _next: NextFunction): Promise<void> => {
-    console.log("[DEBUG] POST /login endpoint hit");
-    console.log("[DEBUG] Original URL:", req.originalUrl);
-    console.log("[DEBUG] Request body:", req.body);
+    console.info("[DEBUG] POST /login endpoint hit");
+    console.info("[DEBUG] Original URL:", req.originalUrl);
+    console.info("[DEBUG] Request body:", req.body);
 
     try {
       // Call auth controller directly
       await authController.login(req, res);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("[DEBUG] Error in /login endpoint:", error);
       res.status(500).json({
         message: "Internal server error",
@@ -515,9 +551,9 @@ app.post(
 // Role Switch Routes - BEFORE CSRF Protection
 // Swagger API Documentation - BEFORE CSRF Protection
 // TEMPORARY: Enable Swagger in all modes for API documentation
-// eslint-disable-next-line no-constant-condition, no-constant-binary-expression
-if (true || process.env.NODE_ENV === "development") {
-  console.log("[DEBUG] Mounting Swagger UI at /api-docs");
+const enableSwagger = true; // Set to false to disable in production
+if (enableSwagger || process.env.NODE_ENV === "development") {
+  console.info("[DEBUG] Mounting Swagger UI at /api-docs");
 
   // Serve OpenAPI JSON spec
   app.get("/api-docs/swagger.json", (_req: Request, res: Response): void => {
@@ -550,7 +586,7 @@ if (true || process.env.NODE_ENV === "development") {
   );
 
   // Serve Swagger UI for v2
-  console.log("[DEBUG] Mounting Swagger UI v2 at /api-docs/v2");
+  console.info("[DEBUG] Mounting Swagger UI v2 at /api-docs/v2");
   app.use(
     "/api-docs/v2",
     swaggerUi.serve,
@@ -572,23 +608,23 @@ if (true || process.env.NODE_ENV === "development") {
 }
 
 // CSRF Protection - applied to all routes except specified exceptions
-console.log("[DEBUG] Applying CSRF protection");
+console.info("[DEBUG] Applying CSRF protection");
 app.use(validateCSRFToken);
 
 // Tenant Status Middleware - check tenant deletion status
-console.log("[DEBUG] Applying tenant status middleware");
+console.info("[DEBUG] Applying tenant status middleware");
 app.use("/api", checkTenantStatus);
 
 // Legacy routes
-console.log("[DEBUG] Mounting legacy routes");
+console.info("[DEBUG] Mounting legacy routes");
 app.use(legacyRoutes);
 
 // Role switch routes
-console.log("[DEBUG] Mounting role-switch routes at /api/role-switch");
+console.info("[DEBUG] Mounting role-switch routes at /api/role-switch");
 app.use("/api/role-switch", roleSwitchRoutes);
 
 // API Routes - Use centralized routing
-console.log("[DEBUG] Mounting main routes at /");
+console.info("[DEBUG] Mounting main routes at /");
 app.use(routes);
 
 // Root and dashboard redirects
@@ -637,7 +673,7 @@ app.use(
 
 // 404 handler
 app.use((req: Request, res: Response): void => {
-  console.log(`[DEBUG] 404 hit: ${req.method} ${req.originalUrl}`);
+  console.info(`[DEBUG] 404 hit: ${req.method} ${req.originalUrl}`);
   res.status(404).json({
     message: "Route not found",
     path: req.originalUrl,
@@ -650,12 +686,12 @@ app.use(
   (err: Error, _req: Request, res: Response, _next: NextFunction): void => {
     console.error("[ERROR]", err.stack ?? (err.message || err));
 
-    const isDevelopment = process.env.NODE_ENV === "development";
-
     res.status(500).json({
       error: "Internal Server Error",
-      message: isDevelopment ? err.message : "Something went wrong",
-      ...(isDevelopment && { stack: err.stack }),
+      message: err.message, // Always show message for debugging
+      stack: err.stack, // Always show stack for debugging
+      name: err.name,
+      details: err,
     });
   },
 );

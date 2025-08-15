@@ -33,8 +33,12 @@ const servePage =
 // Public pages
 // Root '/' is handled by redirectToDashboard middleware in app.ts
 router.get("/index", rateLimiter.public, servePage("index"));
-router.get("/pages/index", rateLimiter.public, (_req: Request, res: Response) =>
-  res.redirect("/index"),
+router.get(
+  "/pages/index",
+  rateLimiter.public,
+  (_req: Request, res: Response) => {
+    res.redirect("/index");
+  },
 ); // Redirect old URL
 router.get("/login", rateLimiter.auth, servePage("login"));
 router.get("/signup", rateLimiter.auth, servePage("signup"));
@@ -223,11 +227,39 @@ router.get(
   servePage("archived-employees"),
 );
 router.get(
-  "/departments",
+  "/manage-departments",
   rateLimiter.admin,
   authenticateToken,
   authorizeRole("admin"),
-  servePage("departments"),
+  servePage("manage-departments"),
+);
+router.get(
+  "/manage-employees",
+  rateLimiter.admin,
+  authenticateToken,
+  authorizeRole("admin"),
+  servePage("manage-employees"),
+);
+router.get(
+  "/manage-areas",
+  rateLimiter.admin,
+  authenticateToken,
+  authorizeRole("admin"),
+  servePage("manage-areas"),
+);
+router.get(
+  "/manage-teams",
+  rateLimiter.admin,
+  authenticateToken,
+  authorizeRole("admin"),
+  servePage("manage-teams"),
+);
+router.get(
+  "/manage-machines",
+  rateLimiter.admin,
+  authenticateToken,
+  authorizeRole("admin"),
+  servePage("manage-machines"),
 );
 router.get(
   "/admin-profile",

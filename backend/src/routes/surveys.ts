@@ -45,14 +45,16 @@ router.get(
         [userId, tenantId],
       );
 
-      const userDepartmentId = userInfo[0]?.department_id ?? null;
+      const userDepartmentId: number | null = userInfo[0]?.department_id as
+        | number
+        | null;
 
       // Get all active surveys assigned to the employee
       const [surveys] = await execute<RowDataPacket[]>(
-        `SELECT DISTINCT s.id 
+        `SELECT DISTINCT s.id
        FROM surveys s
        INNER JOIN survey_assignments sa ON s.id = sa.survey_id
-       WHERE s.tenant_id = ? 
+       WHERE s.tenant_id = ?
        AND s.status = 'active'
        AND (s.end_date IS NULL OR s.end_date > NOW())
        AND (
@@ -77,7 +79,7 @@ router.get(
       }
 
       res.json(successResponse({ pendingCount }));
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("Error fetching pending surveys count:", error);
       res
         .status(500)
@@ -182,11 +184,34 @@ router.get(
       // Root users see all surveys
       if (req.user.role === "root") {
         surveys = await Survey.getAllByTenant(req.user.tenant_id, {
-          status: status
-            ? (String(status) as "active" | "draft" | "closed")
-            : undefined,
-          page: page ? parseInt(String(page)) : 1,
-          limit: limit ? parseInt(String(limit)) : 20,
+          status:
+            status != null && status !== ""
+              ? ((typeof status === "string"
+                  ? status
+                  : typeof status === "object"
+                    ? JSON.stringify(status)
+                    : String(status)) as "active" | "draft" | "closed")
+              : undefined,
+          page:
+            page != null && page !== ""
+              ? parseInt(
+                  typeof page === "string"
+                    ? page
+                    : typeof page === "number"
+                      ? String(page)
+                      : "1",
+                )
+              : 1,
+          limit:
+            limit != null && limit !== ""
+              ? parseInt(
+                  typeof limit === "string"
+                    ? limit
+                    : typeof limit === "number"
+                      ? String(limit)
+                      : "20",
+                )
+              : 20,
         });
       }
       // Admin users see filtered surveys based on department permissions
@@ -195,11 +220,34 @@ router.get(
           req.user.tenant_id,
           req.user.id,
           {
-            status: status
-              ? (String(status) as "active" | "draft" | "closed")
-              : undefined,
-            page: page ? parseInt(String(page)) : 1,
-            limit: limit ? parseInt(String(limit)) : 20,
+            status:
+              status != null && status !== ""
+                ? ((typeof status === "string"
+                    ? status
+                    : typeof status === "object"
+                      ? JSON.stringify(status)
+                      : String(status)) as "active" | "draft" | "closed")
+                : undefined,
+            page:
+              page != null && page !== ""
+                ? parseInt(
+                    typeof page === "string"
+                      ? page
+                      : typeof page === "number"
+                        ? String(page)
+                        : "1",
+                  )
+                : 1,
+            limit:
+              limit != null && limit !== ""
+                ? parseInt(
+                    typeof limit === "string"
+                      ? limit
+                      : typeof limit === "number"
+                        ? String(limit)
+                        : "20",
+                  )
+                : 20,
           },
         );
       }
@@ -209,11 +257,34 @@ router.get(
           req.user.tenant_id,
           req.user.id,
           {
-            status: status
-              ? (String(status) as "active" | "draft" | "closed")
-              : undefined,
-            page: page ? parseInt(String(page)) : 1,
-            limit: limit ? parseInt(String(limit)) : 20,
+            status:
+              status != null && status !== ""
+                ? ((typeof status === "string"
+                    ? status
+                    : typeof status === "object"
+                      ? JSON.stringify(status)
+                      : String(status)) as "active" | "draft" | "closed")
+                : undefined,
+            page:
+              page != null && page !== ""
+                ? parseInt(
+                    typeof page === "string"
+                      ? page
+                      : typeof page === "number"
+                        ? String(page)
+                        : "1",
+                  )
+                : 1,
+            limit:
+              limit != null && limit !== ""
+                ? parseInt(
+                    typeof limit === "string"
+                      ? limit
+                      : typeof limit === "number"
+                        ? String(limit)
+                        : "20",
+                  )
+                : 20,
           },
         );
       }
@@ -224,7 +295,7 @@ router.get(
       }
 
       res.json(successResponse(surveys));
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("Error fetching surveys:", error);
       res
         .status(500)
@@ -242,7 +313,7 @@ router.get(
     try {
       const templates = await Survey.getTemplates(req.user.tenant_id);
       res.json(successResponse(templates));
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("Error fetching templates:", error);
       res
         .status(500)
@@ -267,7 +338,7 @@ router.get(
         return;
       }
       res.json(successResponse(survey));
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("Error fetching survey:", error);
       res
         .status(500)
@@ -288,7 +359,7 @@ router.get(
         req.user.tenant_id,
       );
       res.json(successResponse(stats));
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("Error fetching statistics:", error);
       res
         .status(500)
@@ -309,7 +380,7 @@ router.post(
     end_date: string;
     is_anonymous?: boolean;
     status?: "draft" | "active" | "closed";
-    questions?: Array<{
+    questions?: {
       question_text: string;
       question_type:
         | "text"
@@ -318,30 +389,35 @@ router.post(
         | "rating"
         | "number";
       options?: string[];
-    }>;
-    assignments?: Array<{
+    }[];
+    assignments?: {
       type: "company" | "department" | "team" | "individual";
       department_id?: number;
       team_id?: number;
       user_id?: number;
-    }>;
+    }[];
   }>(async (req, res) => {
     try {
       // For admin users, validate department assignments
       if (req.user.role === "admin" && req.body.assignments) {
         // Get admin's authorized departments
         const [adminDepts] = await execute<RowDataPacket[]>(
-          `SELECT department_id FROM admin_department_permissions 
+          `SELECT department_id FROM admin_department_permissions
            WHERE admin_user_id = ? AND tenant_id = ? AND can_write = 1`,
           [req.user.id, req.user.tenant_id],
         );
 
-        const authorizedDeptIds = adminDepts.map((d) => d.department_id);
+        const authorizedDeptIds = adminDepts.map(
+          (d) => d.department_id as number,
+        );
 
         // Check each assignment
         for (const assignment of req.body.assignments) {
           if (assignment.type === "department") {
-            if (!authorizedDeptIds.includes(assignment.department_id)) {
+            if (
+              assignment.department_id === undefined ||
+              !authorizedDeptIds.includes(assignment.department_id)
+            ) {
               res.status(403).json({
                 error: "Sie haben keine Berechtigung für diese Abteilung",
               });
@@ -391,10 +467,10 @@ router.post(
           message: "Umfrage erfolgreich erstellt",
         }),
       );
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("Error creating survey:", error);
       const stack = getErrorStack(error);
-      if (stack) {
+      if (stack !== "") {
         console.error("Error stack:", stack);
       }
       res
@@ -423,7 +499,7 @@ router.post(
           message: "Umfrage aus Vorlage erstellt",
         }),
       );
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("Error creating survey from template:", error);
       res
         .status(500)
@@ -465,7 +541,7 @@ router.put(
       res.json(
         successResponse({ message: "Umfrage erfolgreich aktualisiert" }),
       );
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("Error updating survey:", error);
       res
         .status(500)
@@ -492,7 +568,7 @@ router.delete(
       }
 
       res.json(successResponse({ message: "Umfrage erfolgreich gelöscht" }));
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("Error deleting survey:", error);
       res
         .status(500)
@@ -509,14 +585,14 @@ router.post(
   typed.paramsBody<
     { id: string },
     {
-      answers: Array<{
+      answers: {
         question_id: number;
         answer_text?: string;
         selected_option_id?: number;
         answer_options?: string;
         answer_number?: number;
         answer_date?: string;
-      }>;
+      }[];
     }
   >(async (req, res) => {
     try {
@@ -524,11 +600,11 @@ router.post(
       const userId = req.user.id;
       const answers = req.body.answers;
 
-      console.log("Submitting response:", {
+      console.info("Submitting response:", {
         surveyId,
         userId,
         userIdType: typeof userId,
-        answersCount: answers ? answers.length : 0,
+        answersCount: answers.length,
         answers: JSON.stringify(answers, null, 2),
         tenantId: req.user.tenant_id,
       });
@@ -545,7 +621,7 @@ router.post(
         return;
       }
 
-      console.log(
+      console.info(
         "Survey is_anonymous:",
         survey.is_anonymous,
         typeof survey.is_anonymous,
@@ -591,7 +667,7 @@ router.post(
             surveyId,
             isAnonymous ? null : userId,
             isAnonymous
-              ? `anon_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+              ? `anon_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`
               : null,
           ],
         );
@@ -600,14 +676,15 @@ router.post(
 
         // Save answers
         for (const answer of answers) {
-          console.log("Saving answer:", {
+          console.info("Saving answer:", {
             tenant_id: req.user.tenant_id,
             response_id: responseId,
             question_id: answer.question_id,
             answer_text: answer.answer_text ?? null,
-            answer_options: answer.answer_options
-              ? JSON.stringify(answer.answer_options)
-              : null,
+            answer_options:
+              answer.answer_options != null && answer.answer_options !== ""
+                ? JSON.stringify(answer.answer_options)
+                : null,
             answer_number: answer.answer_number ?? null,
             answer_date: answer.answer_date ?? null,
           });
@@ -615,7 +692,7 @@ router.post(
           await connection.execute(
             `
           INSERT INTO survey_answers (
-            tenant_id, response_id, question_id, answer_text, answer_options, 
+            tenant_id, response_id, question_id, answer_text, answer_options,
             answer_number, answer_date
           ) VALUES (?, ?, ?, ?, ?, ?, ?)
         `,
@@ -624,7 +701,7 @@ router.post(
               responseId,
               answer.question_id,
               answer.answer_text ?? null,
-              answer.answer_options
+              answer.answer_options != null && answer.answer_options !== ""
                 ? JSON.stringify(answer.answer_options)
                 : null,
               answer.answer_number ?? null,
@@ -640,7 +717,7 @@ router.post(
         );
 
         await connection.commit();
-        console.log(
+        console.info(
           `Response ${responseId} saved successfully for user ${userId} on survey ${surveyId}`,
         );
         res.json(
@@ -649,14 +726,14 @@ router.post(
             responseId,
           }),
         );
-      } catch (error) {
+      } catch (error: unknown) {
         await connection.rollback();
         console.error("Error in transaction:", error);
         throw error;
       } finally {
         connection.release();
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("Error submitting response:", error);
       res
         .status(500)
@@ -675,13 +752,13 @@ router.get(
       const surveyId = parseInt(req.params.id);
       const userId = req.user.id;
 
-      console.log(
+      console.info(
         `Checking response for survey ${surveyId} and user ${userId}`,
       );
 
       const [responses] = await execute<RowDataPacket[]>(
         `
-      SELECT sr.*, sa.question_id, sa.answer_text, sa.answer_options, 
+      SELECT sr.*, sa.question_id, sa.answer_text, sa.answer_options,
              sa.answer_number, sa.answer_date
       FROM survey_responses sr
       LEFT JOIN survey_answers sa ON sr.id = sa.response_id
@@ -690,7 +767,7 @@ router.get(
         [surveyId, userId],
       );
 
-      console.log(
+      console.info(
         `Found ${responses.length} responses for user ${userId} on survey ${surveyId}`,
       );
 
@@ -703,22 +780,22 @@ router.get(
         successResponse({
           responded: true,
           response: {
-            id: responses[0].id,
-            completed_at: responses[0].completed_at,
+            id: responses[0].id as number,
+            completed_at: responses[0].completed_at as Date,
             answers: responses.map((r) => ({
-              question_id: r.question_id,
+              question_id: r.question_id as number,
               answer_text:
-                r.answer_text && Buffer.isBuffer(r.answer_text)
+                r.answer_text != null && Buffer.isBuffer(r.answer_text)
                   ? r.answer_text.toString()
-                  : r.answer_text,
-              answer_options: r.answer_options,
-              answer_number: r.answer_number,
-              answer_date: r.answer_date,
+                  : (r.answer_text as string | null),
+              answer_options: r.answer_options as string | null,
+              answer_number: r.answer_number as number | null,
+              answer_date: r.answer_date as Date | null,
             })),
           },
         }),
       );
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("Error fetching user response:", error);
       res
         .status(500)
@@ -736,7 +813,14 @@ router.get(
   typed.params<{ id: string }>(async (req, res) => {
     try {
       const surveyId = parseInt(req.params.id, 10);
-      const format = req.query.format ? String(req.query.format) : "excel";
+      const format =
+        req.query.format != null && req.query.format !== ""
+          ? typeof req.query.format === "string"
+            ? req.query.format
+            : typeof req.query.format === "object"
+              ? JSON.stringify(req.query.format)
+              : String(req.query.format)
+          : "excel";
 
       // Get survey with all responses
       const survey = await Survey.getById(surveyId, req.user.tenant_id);
@@ -776,14 +860,17 @@ router.get(
               : "N/A",
           },
           { property: "Status", value: survey.status },
-          { property: "Anonym", value: survey.is_anonymous ? "Ja" : "Nein" },
+          {
+            property: "Anonym",
+            value: survey.is_anonymous === true ? "Ja" : "Nein",
+          },
           {
             property: "Anzahl Antworten",
-            value: statistics.total_responses ?? 0,
+            value: statistics.total_responses,
           },
           {
             property: "Abschlussrate",
-            value: `${statistics.completed_responses ?? 0} von ${statistics.total_responses || 0}`,
+            value: `${statistics.completed_responses} von ${statistics.total_responses}`,
           },
         ]);
 
@@ -822,18 +909,20 @@ router.get(
               question.options
             ) {
               // Count responses per option
-              const optionCounts: { [key: number]: number } = {};
+              const optionCounts: Record<number, number> = {};
               question.options.forEach((opt) => {
                 optionCounts[opt.id] = 0;
               });
 
               responses.forEach((resp) => {
                 // Parse answer_options if it's stored as JSON
-                if (resp.answer_options) {
+                if (resp.answer_options != null) {
                   try {
-                    const selectedOptions = JSON.parse(resp.answer_options);
+                    const selectedOptions = JSON.parse(
+                      resp.answer_options as string,
+                    ) as number[];
                     selectedOptions.forEach((optionId: number) => {
-                      if (optionCounts[optionId] !== undefined) {
+                      if (optionId in optionCounts) {
                         optionCounts[optionId]++;
                       }
                     });
@@ -859,9 +948,9 @@ router.get(
               responses.forEach((response) => {
                 questionsSheet.addRow([
                   "",
-                  survey.is_anonymous
+                  survey.is_anonymous === true
                     ? "Anonym"
-                    : `${response.first_name ?? ""} ${response.last_name ?? ""}`.trim() ||
+                    : `${String(response.first_name ?? "")} ${String(response.last_name ?? "")}`.trim() ||
                       "N/A",
                   response.answer_text ?? "",
                 ]);
@@ -871,8 +960,8 @@ router.get(
               question.question_type === "rating"
             ) {
               const numbers = responses
-                .map((r) => r.answer_number)
-                .filter((n) => n !== null);
+                .map((r) => r.answer_number as number | null | undefined)
+                .filter((n): n is number => n !== null && n !== undefined);
               if (numbers.length > 0) {
                 const avg =
                   numbers.reduce((a: number, b: number) => a + b, 0) /
@@ -905,7 +994,7 @@ router.get(
       } else {
         res.status(400).json(errorResponse("Nicht unterstütztes Format", 400));
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("Error exporting survey:", error);
       res
         .status(500)
